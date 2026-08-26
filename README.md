@@ -24,7 +24,9 @@ JSTQB Foundation Level（CTFL v4.0）第1章・第2章を対象とした、新�
 
 ## Slack通知
 
-公開HTMLにSlack Incoming Webhookの秘密URLを直接記載しないでください。本番HTMLの `SLACK_NOTIFY_URL` には、Slack認証情報を安全に保持する社内の通知中継URLを指定します。
+公開HTMLにSlack Incoming Webhookの秘密URLを直接記載しないでください。本番HTMLの `SLACK_NOTIFY_URL` には、Slack認証情報を安全に保持するGAS WebアプリのURLを指定します。
+
+GASのソースと運用手順は `gas/` に保存しています。Slack Incoming Webhook URLは、GASのスクリプト プロパティ `SLACK_WEBHOOK_URL` にだけ登録します。
 
 ## GitHub Pages
 
