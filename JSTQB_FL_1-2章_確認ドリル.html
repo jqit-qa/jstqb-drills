@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>JSTQB FL 確認ドリル｜第1章・第2章</title>
 <style>
   :root{
@@ -14,7 +14,8 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Noto Sans JP",Meiryo,sans-serif;
-    line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+    line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh;overscroll-behavior-y:contain}
+  button{-webkit-tap-highlight-color:transparent}
   .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 
   header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:none}
@@ -28,7 +29,7 @@
   .track{width:120px;height:6px;background:var(--line);border-radius:999px;overflow:hidden}
   .track>span{display:block;height:100%;width:0;background:var(--accent);transition:width .3s ease}
 
-  main{max-width:640px;margin:0 auto;padding:30px 22px 60px}
+  main{max-width:640px;margin:0 auto;padding:30px 22px calc(60px + env(safe-area-inset-bottom, 0px))}
 
   /* start */
   #start{display:none;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:30px 28px}
@@ -39,6 +40,8 @@
   .rules{list-style:none;padding:0;margin:0 0 24px;display:flex;flex-direction:column;gap:11px}
   .rules li{display:flex;gap:12px;align-items:flex-start;font-size:14.5px}
   .rules .ic{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;color:var(--accent);background:var(--accent-tint);border-radius:8px;width:26px;height:26px;flex:none;display:grid;place-items:center;font-size:13px}
+  .browser-note{border:1px solid #ead79b;border-radius:12px;background:#fff8df;color:#695514;padding:12px 14px;margin:0 0 20px;font-size:13px}
+  .browser-note strong{display:block;color:#4f400f;margin-bottom:2px}
   .prep{border:1px solid var(--line);border-radius:12px;background:#fafbff;padding:16px;margin:0 0 20px}
   .prep label{display:block;font-size:14px;font-weight:600;margin-bottom:8px}
   .prep input[type="text"]{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font:inherit;margin-bottom:12px}
@@ -51,7 +54,7 @@
   .resume-panel p{font-size:13px;color:var(--muted);margin:0 0 12px}
   .resume-panel .resume-hint{font-size:12px;color:var(--fail);margin:-4px 0 10px}
   .resume-actions{display:flex;flex-wrap:wrap;gap:8px}
-  .resume-actions button{font:inherit;font-size:13px;font-weight:700;border-radius:9px;padding:9px 12px;cursor:pointer}
+  .resume-actions button{font:inherit;font-size:13px;font-weight:700;border-radius:9px;padding:9px 12px;min-height:44px;cursor:pointer}
   .resume-primary{border:1px solid var(--accent);background:var(--accent);color:#fff}
   .resume-secondary{border:1px solid #b9c2dc;background:#fff;color:var(--ink)}
   .resume-actions button:disabled{opacity:.45;cursor:not-allowed}
@@ -73,16 +76,17 @@
   .opts{display:flex;flex-direction:column;gap:10px}
   .opt{display:flex;align-items:flex-start;gap:13px;border:1.5px solid var(--line);border-radius:12px;padding:14px 15px;cursor:pointer;background:#fff;text-align:left;font:inherit;color:inherit;transition:border-color .12s,background .12s,transform .08s}
   .opt:hover{border-color:#b9c2dc;background:#fafbff}
-  .opt:active{transform:scale(.995)}
   .opt .key{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:14px;width:27px;height:27px;flex:none;display:grid;place-items:center;border:1.5px solid var(--line);border-radius:8px;color:var(--muted);transition:.12s}
   .opt .txt{font-size:15px;padding-top:1px}
   .opt.sel{border-color:var(--accent);background:var(--accent-tint)}
   .opt.sel .key{background:var(--accent);border-color:var(--accent);color:#fff}
   .opt.sel .txt{font-weight:600}
+  .opt.sel::after{content:"✓";margin-left:auto;color:var(--accent);font-weight:800;font-size:18px;line-height:1;animation:check-pop .18s ease-out}
+  @keyframes check-pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
   .opt:focus-visible{outline:3px solid var(--accent-tint);outline-offset:2px}
 
   .nav{display:flex;align-items:center;margin-top:22px}
-  button.nav-btn{font-family:inherit;font-size:14px;font-weight:600;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:10px 18px;cursor:pointer;transition:.14s}
+  button.nav-btn{font-family:inherit;font-size:14px;font-weight:600;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:14px 20px;min-height:44px;cursor:pointer;transition:.14s}
   button.nav-btn:hover{border-color:#b9c2dc;background:#fafbff}
   button.nav-btn:disabled{opacity:.4;cursor:not-allowed}
   .nav .spacer{flex:1}
@@ -123,6 +127,19 @@
   .btn-primary{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:14px 24px;font:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:.14s}
   .btn-primary:hover{background:#2f47b8}
 
+  .opt,
+  button.nav-btn,
+  .retry,
+  .btn-primary,
+  .resume-actions button,
+  .prep .check{touch-action:manipulation}
+
+  .opt:not(:disabled):active,
+  button.nav-btn:not(:disabled):active,
+  .retry:not(:disabled):active,
+  .btn-primary:not(:disabled):active,
+  .resume-actions button:not(:disabled):active{transform:scale(.985);filter:brightness(.96)}
+
   @media(max-width:520px){#start h1{font-size:23px}.qtext{font-size:16px}.rscore .pct{font-size:38px}.bar{gap:9px}.track{width:72px}.kicker{display:none}}
   @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -150,6 +167,7 @@
       <li><span class="ic">3</span><span>初回の50問を最後まで終えると、設定済みの場合は<b>Slackへ完了通知</b>を送ります。</span></li>
       <li><span class="ic">✓</span><span>誤答だけをやり直し、<b>全50問正解</b>になるまで繰り返します。</span></li>
     </ul>
+    <p class="browser-note"><strong>ご利用上の注意</strong>必ずSafari／Chromeなどの標準ブラウザで開いてください。Slackやメールなどのアプリ内ブラウザでは保存領域が別になり、途中離脱後に結果を再開できない可能性があります。</p>
     <div class="resume-panel" id="resumePanel" hidden>
       <strong>前回の学習履歴があります</strong>
       <p id="resumeSummary"></p>

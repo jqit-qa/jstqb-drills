@@ -9,6 +9,11 @@
 const WEBHOOK_PROPERTY = 'SLACK_WEBHOOK_URL';
 const EXPECTED_SOURCE = 'jstqb-drill';
 const TOTAL_QUESTIONS = 50;
+const MAX_REQUEST_CHARS = 2048;
+const ATTEMPT_CACHE_SECONDS = 21600;
+const RATE_WINDOW_PROPERTY = 'rate:window';
+const RATE_WINDOW_SECONDS = 300;
+const RATE_WINDOW_LIMIT = 10;
 const DAILY_LIMIT = 100;
 
 function doGet() {
@@ -20,7 +25,13 @@ function doGet() {
 
 function doPost(e) {
   try {
-    const data = JSON.parse(e.postData.contents || '{}');
+    const raw = e && e.postData && e.postData.contents || '';
+
+    if (!raw || raw.length > MAX_REQUEST_CHARS) {
+      throw new Error('Invalid request size');
+    }
+
+    const data = JSON.parse(raw);
 
     if (
       data.source !== EXPECTED_SOURCE ||
@@ -29,9 +40,13 @@ function doPost(e) {
       throw new Error('Invalid request');
     }
 
-    const name = sanitize_(data.name, 80);
-    const attemptId = sanitize_(data.attemptId, 100);
-    const correct = Number(data.correct);
+    if (typeof data.name !== 'string' || typeof data.attemptId !== 'string') {
+      throw new Error('Invalid field types');
+    }
+
+    const name = sanitizeName_(data.name);
+    const attemptId = sanitizeAttemptId_(data.attemptId);
+    const correct = data.correct;
 
     if (!name || !attemptId) {
       throw new Error('Required fields are missing');
@@ -56,11 +71,14 @@ function doPost(e) {
 
     return createResponse_({ok: true});
   } catch (error) {
-    console.error(error);
+    console.warn(JSON.stringify({
+      event: 'request_rejected',
+      reason: String(error.message || error)
+    }));
 
     return createResponse_({
       ok: false,
-      error: String(error.message || error)
+      error: 'Request rejected'
     });
   }
 }
@@ -78,6 +96,27 @@ function reserveNotification_(attemptId) {
     }
 
     const properties = PropertiesService.getScriptProperties();
+    const now = Date.now();
+    let rateState;
+
+    try {
+      rateState = JSON.parse(properties.getProperty(RATE_WINDOW_PROPERTY) || '{}');
+    } catch (error) {
+      rateState = {};
+    }
+
+    if (
+      !Number.isFinite(rateState.startedAt) ||
+      !Number.isInteger(rateState.count) ||
+      now - rateState.startedAt >= RATE_WINDOW_SECONDS * 1000
+    ) {
+      rateState = {startedAt: now, count: 0};
+    }
+
+    if (rateState.count >= RATE_WINDOW_LIMIT) {
+      throw new Error('Short-term notification limit exceeded');
+    }
+
     const dateKey =
       'daily:' +
       Utilities.formatDate(
@@ -93,7 +132,11 @@ function reserveNotification_(attemptId) {
     }
 
     properties.setProperty(dateKey, String(count + 1));
-    cache.put(duplicateKey, '1', 21600);
+    properties.setProperty(RATE_WINDOW_PROPERTY, JSON.stringify({
+      startedAt: rateState.startedAt,
+      count: rateState.count + 1
+    }));
+    cache.put(duplicateKey, '1', ATTEMPT_CACHE_SECONDS);
 
     return true;
   } finally {
@@ -130,20 +173,20 @@ function sendToSlack_(name, correct) {
         type: 'section',
         fields: [
           {
-            type: 'mrkdwn',
-            text: '*受験者*\n' + escapeSlack_(name)
+            type: 'plain_text',
+            text: '受験者\n' + name
           },
           {
-            type: 'mrkdwn',
-            text: '*初回結果*\n' + correct + '/50問正解'
+            type: 'plain_text',
+            text: '初回結果\n' + correct + '/50問正解'
           },
           {
-            type: 'mrkdwn',
-            text: '*間違い*\n' + incorrect + '問'
+            type: 'plain_text',
+            text: '間違い\n' + incorrect + '問'
           },
           {
-            type: 'mrkdwn',
-            text: '*完了日時*\n' + completedAt
+            type: 'plain_text',
+            text: '完了日時\n' + completedAt
           }
         ]
       },
@@ -151,10 +194,19 @@ function sendToSlack_(name, correct) {
         type: 'context',
         elements: [
           {
-            type: 'mrkdwn',
+            type: 'plain_text',
             text: incorrect === 0
               ? '全問正解です。'
               : 'この後、間違えた問題のみ再実施します。'
+          }
+        ]
+      },
+      {
+        type: 'context',
+        elements: [
+          {
+            type: 'plain_text',
+            text: '注意：ブラウザからの自己申告通知で、解答内容をサーバー検証していません。認定・人事評価の唯一の根拠にしないでください。'
           }
         ]
       }
@@ -177,18 +229,22 @@ function sendToSlack_(name, correct) {
   }
 }
 
-function sanitize_(value, maxLength) {
-  return String(value || '')
-    .replace(/[\u0000-\u001f\u007f]/g, '')
-    .trim()
-    .slice(0, maxLength);
+function sanitizeName_(value) {
+  const normalized = String(value || '')
+    .normalize('NFKC')
+    .replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, '')
+    .replace(/[<>&]/g, function(character) {
+      return {'<': '＜', '>': '＞', '&': '＆'}[character];
+    })
+    .trim();
+
+  return Array.from(normalized).slice(0, 80).join('');
 }
 
-function escapeSlack_(value) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+function sanitizeAttemptId_(value) {
+  const attemptId = String(value || '').trim().slice(0, 100);
+
+  return /^[A-Za-z0-9-]{8,100}$/.test(attemptId) ? attemptId : '';
 }
 
 function createResponse_(body) {
