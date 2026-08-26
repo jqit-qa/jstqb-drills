@@ -111,6 +111,18 @@ assert.ok(!html.includes('問題バンクの設問数だけ'));
 assert.ok(!markdown.includes('問題バンクの設問数だけ'));
 assert.ok(!html.includes('hooks.slack.com/services'));
 
+assert.ok(
+  html.includes('width=device-width, initial-scale=1.0, viewport-fit=cover'),
+  'iPhoneのセーフエリアをviewportへ反映すること'
+);
+assert.match(html, /body\{[^}]*overscroll-behavior-y:contain/);
+assert.match(html, /button\{[^}]*-webkit-tap-highlight-color:transparent/);
+assert.match(html, /main\{[^}]*env\(safe-area-inset-bottom, 0px\)/);
+assert.match(html, /button\.nav-btn\{[^}]*padding:14px 20px;[^}]*min-height:44px/);
+assert.match(html, /\.opt:not\(:disabled\):active,[\s\S]*\.btn-primary:not\(:disabled\):active/);
+assert.ok(html.includes('Slackやメールなどのアプリ内ブラウザでは保存領域が別になり'));
+assert.match(html, /\.opt\.sel::after\{content:"✓"/);
+
 class MockElement {
   constructor() {
     this.value = '';
