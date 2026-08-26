@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const html = fs.readFileSync('JSTQB_FL_1-2章_確認ドリル.html', 'utf8');
+const html = fs.readFileSync('index.html', 'utf8');
+const legacyHtml = fs.readFileSync('JSTQB_FL_1-2章_確認ドリル.html', 'utf8');
 const markdown = fs.readFileSync('JSTQB_FL_1-2章_4択問題バンク.md', 'utf8');
 const gas = fs.readFileSync('gas/Code.gs', 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
@@ -10,6 +11,8 @@ const STORAGE_KEY = 'jstqb-fl-ch1-2-progress-v2';
 const LEGACY_STORAGE_KEY = 'jstqb-fl-ch1-2-progress-v1';
 
 assert.ok(script, 'HTML内のscriptを取得できること');
+assert.match(legacyHtml, /http-equiv="refresh" content="0; url=\.\/"/);
+assert.match(legacyHtml, /rel="canonical" href="https:\/\/jqit-qa\.github\.io\/jstqb-drills\/"/);
 new Function(script);
 new Function(gas);
 
