@@ -15,7 +15,7 @@
   body{margin:0;background:var(--bg);color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Noto Sans JP",Meiryo,sans-serif;
     line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh;overscroll-behavior-y:contain}
-  button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+  button{-webkit-tap-highlight-color:transparent}
   .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 
   header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:none}
@@ -126,6 +126,13 @@
 
   .btn-primary{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:14px 24px;font:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:.14s}
   .btn-primary:hover{background:#2f47b8}
+
+  .opt,
+  button.nav-btn,
+  .retry,
+  .btn-primary,
+  .resume-actions button,
+  .prep .check{touch-action:manipulation}
 
   .opt:not(:disabled):active,
   button.nav-btn:not(:disabled):active,

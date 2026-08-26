@@ -122,6 +122,12 @@ assert.match(html, /button\.nav-btn\{[^}]*padding:14px 20px;[^}]*min-height:44px
 assert.match(html, /\.opt:not\(:disabled\):active,[\s\S]*\.btn-primary:not\(:disabled\):active/);
 assert.ok(html.includes('Slackやメールなどのアプリ内ブラウザでは保存領域が別になり'));
 assert.match(html, /\.opt\.sel::after\{content:"✓"/);
+assert.match(
+  html,
+  /\.opt,\s*button\.nav-btn,\s*\.retry,\s*\.btn-primary,\s*\.resume-actions button,\s*\.prep \.check\{touch-action:manipulation\}/
+);
+assert.doesNotMatch(html, /user-scalable\s*=\s*no/i);
+assert.doesNotMatch(html, /maximum-scale\s*=\s*1(?:\.0)?/i);
 
 class MockElement {
   constructor() {
@@ -393,11 +399,16 @@ assert.equal(storage.size, 0, '破損・非互換データを自動削除する�
 
 const sent = [];
 const cache = new Map();
+const securityLogs = [];
 const properties = new Map([
   ['SLACK_WEBHOOK_URL', 'https://example.invalid/webhook']
 ]);
 const gasContext = {
-  console,
+  console: {
+    warn: message => securityLogs.push(String(message)),
+    error: message => securityLogs.push(String(message)),
+    log() {}
+  },
   PropertiesService: {
     getScriptProperties: () => ({
       getProperty: key => properties.get(key) || null,
@@ -439,4 +450,61 @@ gasContext.handlePost({postData: {contents: JSON.stringify(request)}});
 gasContext.handlePost({postData: {contents: JSON.stringify(request)}});
 assert.equal(sent.length, 1, '同一受験IDのSlack通知を重複送信しないこと');
 
-console.log('PASS: 問題整合・途中回答復元・結果復元・旧形式移行・削除・Slack重複抑止');
+const maliciousNameRequest = {
+  ...request,
+  name: '\u202e<https://evil.example|本人>\u200b',
+  attemptId: 'security-test-0001',
+  correct: 50
+};
+gasContext.handlePost({postData: {contents: JSON.stringify(maliciousNameRequest)}});
+assert.equal(sent.length, 2);
+const securedMessage = JSON.parse(sent[1].options.payload);
+assert.ok(
+  securedMessage.blocks[1].fields.every(field => field.type === 'plain_text'),
+  '受講者名を含むSlackフィールドをplain_textで送ること'
+);
+assert.equal(
+  securedMessage.blocks[1].fields[0].text,
+  '受験者\n＜https://evil.example|本人＞',
+  '不可視文字とSlackリンク記法を無害化すること'
+);
+assert.ok(
+  securedMessage.blocks.some(block =>
+    block.type === 'context' && block.elements?.some(element =>
+      element.text.includes('自己申告通知') && element.text.includes('唯一の根拠にしない')
+    )
+  ),
+  'Slack通知自体に自己申告データである旨を表示すること'
+);
+
+for (let index = 0; index < 8; index++) {
+  gasContext.handlePost({postData: {contents: JSON.stringify({
+    ...request,
+    attemptId: `rate-test-${String(index).padStart(4, '0')}`
+  })}});
+}
+assert.equal(sent.length, 10, '5分間の上限までは通知すること');
+const rateLimited = gasContext.handlePost({postData: {contents: JSON.stringify({
+  ...request,
+  attemptId: 'rate-test-over-limit'
+})}});
+assert.equal(sent.length, 10, '5分間10件を超えるSlack通知を拒否すること');
+assert.equal(JSON.parse(rateLimited.text).ok, false);
+
+const oversized = gasContext.handlePost({postData: {contents: 'x'.repeat(2049)}});
+assert.equal(JSON.parse(oversized.text).ok, false);
+const stringScore = gasContext.handlePost({postData: {contents: JSON.stringify({
+  ...request,
+  attemptId: 'invalid-score-test',
+  correct: '50'
+})}});
+assert.equal(JSON.parse(stringScore.text).ok, false);
+assert.equal(sent.length, 10, '文字列型の点数を拒否すること');
+assert.ok(
+  securityLogs.some(log => log.includes('Short-term notification limit exceeded'))
+    && securityLogs.some(log => log.includes('Invalid request size'))
+    && securityLogs.some(log => log.includes('Invalid score')),
+  '拒否理由を異常投稿の検知ログとして記録すること'
+);
+
+console.log('PASS: 問題整合・進捗復元・モバイル操作・Slack入力無害化・重複／レート抑止');
