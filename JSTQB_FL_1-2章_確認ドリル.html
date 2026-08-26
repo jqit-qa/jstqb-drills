@@ -56,6 +56,10 @@
   .qno{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:12px;color:#fff;background:var(--ink);border-radius:7px;padding:4px 9px}
   .qtag{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
   .qtext{font-size:17px;font-weight:600;line-height:1.5;margin:0 0 20px}
+  .qhint{display:flex;align-items:center;gap:9px;margin:-7px 0 18px;padding:10px 12px;border-radius:10px;background:#f7f8fc;font-size:13px;color:var(--muted)}
+  .qhint .label{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-tint);border-radius:6px;padding:2px 7px}
+  .qhint a{color:var(--accent);font-weight:700;text-decoration:none}
+  .qhint a:hover{text-decoration:underline}
   .opts{display:flex;flex-direction:column;gap:10px}
   .opt{display:flex;align-items:flex-start;gap:13px;border:1.5px solid var(--line);border-radius:12px;padding:14px 15px;cursor:pointer;background:#fff;text-align:left;font:inherit;color:inherit;transition:border-color .12s,background .12s,transform .08s}
   .opt:hover{border-color:#b9c2dc;background:#fafbff}
@@ -118,7 +122,7 @@
 <header id="hdr">
   <div class="bar">
     <span class="kicker">JSTQB FL 確認ドリル</span>
-    <a class="syllabus-link" href="https://www.jstqb.jp/syllabus/" target="_blank" rel="noopener noreferrer">シラバスを開く ↗</a>
+    <a class="syllabus-link" href="https://jstqb.jp/dl/JSTQB-SyllabusFoundation_VersionV40.J02.pdf" target="_blank" rel="noopener noreferrer">シラバスを開く ↗</a>
     <span class="count">Q <b id="cur">1</b> / <span id="tot">50</span></span>
     <span class="track"><span id="fill"></span></span>
   </div>
@@ -132,14 +136,14 @@
     <p class="sub">50問の4択ドリル。全問正解になるまで、誤答だけを繰り返します。</p>
     <ul class="rules">
       <li><span class="ic">1</span><span>最初に公式シラバスの<b>第1章・第2章を読んで</b>ください。ドリル中も参照できます。</span></li>
-      <li><span class="ic">2</span><span>全50問を<b>ランダム順で出題</b>。選択肢の並びも毎回変わります。</span></li>
+      <li><span class="ic">2</span><span>全50問を<b>シラバスのページ・節番号順</b>に出題します。選択肢はAからDの固定順です。</span></li>
       <li><span class="ic">3</span><span>初回の50問を最後まで終えると、設定済みの場合は<b>Slackへ完了通知</b>を送ります。</span></li>
       <li><span class="ic">✓</span><span>誤答だけをやり直し、<b>全50問正解</b>になるまで繰り返します。</span></li>
     </ul>
     <div class="prep">
       <label for="learnerName">受講者名</label>
       <input id="learnerName" type="text" maxlength="80" autocomplete="name" placeholder="例：山田 太郎">
-      <label class="check"><input id="readSyllabus" type="checkbox"><span><a href="https://www.jstqb.jp/syllabus/" target="_blank" rel="noopener noreferrer">JSTQB公式シラバス</a>の第1章・第2章を読みました</span></label>
+      <label class="check"><input id="readSyllabus" type="checkbox"><span><a href="https://jstqb.jp/dl/JSTQB-SyllabusFoundation_VersionV40.J02.pdf" target="_blank" rel="noopener noreferrer">JSTQB公式シラバス</a>の第1章・第2章を読みました</span></label>
     </div>
     <button class="btn-primary" id="startBtn" type="button" disabled>50問をはじめる</button>
     <p class="source-note">準拠：JSTQB Foundation Level シラバス Version 2023V4.0.J02。シラバス改訂時は、問題・正答・節番号の再確認と更新が必要です。</p>
@@ -185,7 +189,21 @@ const ADVANCE_MS = 320;// 選択してから次問へ進むまでの待ち時間
 // 空文字のままなら通知を送らず、ドリルは通常どおり続行します。
 const SLACK_NOTIFY_URL = "";
 const SYLLABUS_VERSION = "JSTQB Foundation Level Version 2023V4.0.J02";
+const SYLLABUS_URL = "https://jstqb.jp/dl/JSTQB-SyllabusFoundation_VersionV40.J02.pdf";
 /* ============================================== */
+
+// 公式シラバス Version 2023V4.0.J02 の目次に記載された各節の開始ページ。
+// シラバス改訂時は QUESTIONS と同時に見直してください。
+const SYLLABUS_PAGES = {
+  "1.1.1":16, "1.1.2":17,
+  "1.2.1":17, "1.2.2":18, "1.2.3":18,
+  "1.3":18,
+  "1.4.1":19, "1.4.2":20, "1.4.3":21, "1.4.4":21, "1.4.5":22,
+  "1.5.1":22, "1.5.2":23, "1.5.3":23,
+  "2.1.1":26, "2.1.2":26, "2.1.3":27, "2.1.4":27, "2.1.5":28, "2.1.6":28,
+  "2.2.1":29, "2.2.2":30, "2.2.3":31,
+  "2.3":31
+};
 
 const QUESTIONS = [
   {id:1,ch:1,ref:"1.1.1",ans:2,q:"ソフトウェアテストの目的として、最も適切でないものはどれか。",opts:["欠陥を検出する","対象の品質に対する信頼を積み上げる","コードからすべての欠陥を取り除いたことを証明する","意思決定のための情報を提供する"]},
@@ -248,14 +266,16 @@ let session=[], answers=[], initialQuestions=[], lastWrong=[];
 let cur=0, locking=false, roundNumber=0, initialCompletionSent=false;
 let mastered = new Set();
 
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function pad(n){return String(n).padStart(2,"0");}
+function syllabusPage(ref){return SYLLABUS_PAGES[ref];}
+function syllabusOrder(a,b){
+  return syllabusPage(a.ref)-syllabusPage(b.ref)
+    || a.ref.localeCompare(b.ref,undefined,{numeric:true})
+    || a.id-b.id;
+}
 
 function makeRound(questions){
-  session = shuffle(questions.slice()).map(q=>{
-    const order = shuffle([0,1,2,3]);
-    return { q, opts: order.map(i=>q.opts[i]), ans: order.indexOf(q.ans) };
-  });
+  session = questions.slice().sort(syllabusOrder).map(q=>({q,opts:q.opts.slice(),ans:q.ans}));
   answers = new Array(session.length).fill(null);
   cur = 0;
   roundNumber++;
@@ -263,8 +283,8 @@ function makeRound(questions){
 }
 
 function buildInitialSession(){
-  const ch1 = shuffle(QUESTIONS.filter(q=>q.ch===1)).slice(0,DRAW_CH1);
-  const ch2 = shuffle(QUESTIONS.filter(q=>q.ch===2)).slice(0,DRAW_CH2);
+  const ch1 = QUESTIONS.filter(q=>q.ch===1).slice(0,DRAW_CH1);
+  const ch2 = QUESTIONS.filter(q=>q.ch===2).slice(0,DRAW_CH2);
   if(ch1.length!==DRAW_CH1 || ch2.length!==DRAW_CH2){
     throw new Error("設定した出題数に対して問題バンクが不足しています。");
   }
@@ -286,6 +306,7 @@ function show(view){
 
 function renderQuestion(){
   const s = session[cur];
+  const page = syllabusPage(s.q.ref);
   el("cur").textContent = cur+1;
   el("fill").style.width = ((cur+1)/session.length*100)+"%";
   el("prevBtn").disabled = cur===0;
@@ -296,6 +317,7 @@ function renderQuestion(){
   el("qcard").innerHTML =
     `<div class="qmeta"><span class="qno">Q${pad(cur+1)}</span><span class="qtag">第${s.q.ch}章</span></div>
      <p class="qtext">${s.q.q}</p>
+     <div class="qhint"><span class="label">ヒント</span><a href="${SYLLABUS_URL}#page=${page}" target="_blank" rel="noopener noreferrer">公式シラバス p.${page}（${s.q.ref}）を開く ↗</a></div>
      <div class="opts">` +
      s.opts.map((t,i)=>`<button type="button" class="opt${answers[cur]===i?" sel":""}" data-i="${i}">
         <span class="key">${KEYS[i]}</span><span class="txt">${t}</span></button>`).join("") +
