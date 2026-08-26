@@ -163,7 +163,7 @@
       <label for="learnerName">受講者名</label>
       <input id="learnerName" type="text" maxlength="80" autocomplete="name" placeholder="例：山田 太郎">
       <label class="check"><input id="readSyllabus" type="checkbox"><span><a href="https://jstqb.jp/dl/JSTQB-SyllabusFoundation_VersionV40.J02.pdf" target="_blank" rel="noopener noreferrer">JSTQB公式シラバス</a>の第1章・第2章を読みました</span></label>
-      <p class="privacy-note">受講者名と結果画面到達時の学習進捗を、このブラウザ内に保存します。別の端末やブラウザには引き継がれません。</p>
+      <p class="privacy-note">受講者名・回答途中の位置・選択内容・学習進捗を、このブラウザ内に保存します。別の端末やブラウザには引き継がれません。</p>
     </div>
     <button class="btn-primary" id="startBtn" type="button" disabled>50問をはじめる</button>
     <p class="source-note">準拠：JSTQB Foundation Level シラバス Version 2023V4.0.J02。シラバス改訂時は、問題・正答・節番号の再確認と更新が必要です。</p>
@@ -205,8 +205,9 @@ const DRAW_CH2 = 25;   // 第2章から出題する数
 const PASS_ALL = true; // true=全問正解で合格 / false のとき下の割合を使用
 const PASS_PCT = 80;   // PASS_ALL=false のときの合格ライン(%)
 const ADVANCE_MS = 320;// 選択してから次問へ進むまでの待ち時間(ms)
-const STORAGE_VERSION = 1;
-const STORAGE_KEY = "jstqb-fl-ch1-2-progress-v1";
+const STORAGE_VERSION = 2;
+const STORAGE_KEY = "jstqb-fl-ch1-2-progress-v2";
+const LEGACY_STORAGE_KEY = "jstqb-fl-ch1-2-progress-v1";
 // Slackへ直接送らず、認証情報を保持する社内の通知中継URLを指定してください。
 // 空文字のままなら通知を送らず、ドリルは通常どおり続行します。
 const SLACK_NOTIFY_URL = "https://script.google.com/macros/s/AKfycbygAfjSXMDKffFoNqGw2AsGSTtw8thyIPcbm3AdxaZE4aGuikqflrrCPYrJxQ818n_K/exec";
@@ -326,14 +327,19 @@ function buildInitialSession(){
   makeRound(initialQuestions);
 }
 
-function saveProgress(){
+function saveProgress(phase="result"){
   if(!initialQuestions.length) return;
+  const inProgress=phase==="in_progress";
   const progress = {
     version:STORAGE_VERSION,
+    phase,
     learnerName:el("learnerName").value.trim(),
     initialQuestionIds:initialQuestions.map(q=>q.id),
     masteredIds:[...mastered],
     lastWrongIds:lastWrong.map(q=>q.id),
+    sessionQuestionIds:inProgress?session.map(s=>s.q.id):[],
+    answers:inProgress?answers.slice():[],
+    currentIndex:inProgress?cur:0,
     roundNumber,
     initialCompletionSent,
     initialAttemptId,
@@ -349,18 +355,36 @@ function saveProgress(){
 }
 
 function clearSavedProgress(){
-  try{ localStorage.removeItem(STORAGE_KEY); }
+  try{
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  }
   catch(error){ console.warn("学習進捗を削除できませんでした。",error); }
   savedProgress=null;
   renderSavedProgress();
 }
 
 function restoreProgress(){
-  let progress;
+  let progress,sourceKey;
   try{
-    const raw=localStorage.getItem(STORAGE_KEY);
+    sourceKey=STORAGE_KEY;
+    let raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw){
+      sourceKey=LEGACY_STORAGE_KEY;
+      raw=localStorage.getItem(LEGACY_STORAGE_KEY);
+    }
     if(!raw) return false;
     progress=JSON.parse(raw);
+    if(sourceKey===LEGACY_STORAGE_KEY && progress.version===1){
+      progress={
+        ...progress,
+        version:STORAGE_VERSION,
+        phase:"result",
+        sessionQuestionIds:[],
+        answers:[],
+        currentIndex:0
+      };
+    }
   }catch(error){
     console.warn("保存済みの学習進捗を読み込めませんでした。",error);
     clearSavedProgress();
@@ -372,18 +396,39 @@ function restoreProgress(){
   const initialIds=Array.isArray(progress.initialQuestionIds)?progress.initialQuestionIds:[];
   const masteredIds=Array.isArray(progress.masteredIds)?progress.masteredIds:[];
   const wrongIds=Array.isArray(progress.lastWrongIds)?progress.lastWrongIds:[];
+  const sessionIds=Array.isArray(progress.sessionQuestionIds)?progress.sessionQuestionIds:[];
+  const storedAnswers=Array.isArray(progress.answers)?progress.answers:[];
   const validIds=ids=>ids.every(id=>Number.isInteger(id)&&expectedIds.has(id)&&questionById.has(id));
-  const partition=new Set(masteredIds.concat(wrongIds));
-  const isValid=progress.version===STORAGE_VERSION
+  const unique=ids=>ids.length===new Set(ids).size;
+  const baseValid=progress.version===STORAGE_VERSION
+    && (progress.phase==="result" || progress.phase==="in_progress")
     && typeof progress.learnerName==="string" && progress.learnerName.trim()
     && typeof progress.initialAttemptId==="string" && progress.initialAttemptId
     && Number.isInteger(progress.roundNumber) && progress.roundNumber>=1
     && initialIds.length===expectedIds.size && new Set(initialIds).size===expectedIds.size
-    && masteredIds.length===new Set(masteredIds).size
-    && wrongIds.length===new Set(wrongIds).size
-    && validIds(initialIds) && validIds(masteredIds) && validIds(wrongIds)
+    && unique(masteredIds) && unique(wrongIds) && unique(sessionIds)
+    && validIds(initialIds) && validIds(masteredIds) && validIds(wrongIds) && validIds(sessionIds);
+  const resultPartition=new Set(masteredIds.concat(wrongIds));
+  const resultValid=progress.phase==="result"
     && !masteredIds.some(id=>wrongIds.includes(id))
-    && partition.size===expectedIds.size;
+    && resultPartition.size===expectedIds.size;
+  const activePartition=new Set(masteredIds.concat(sessionIds));
+  const answersValid=storedAnswers.length===sessionIds.length
+    && storedAnswers.every(answer=>answer===null || (Number.isInteger(answer)&&answer>=0&&answer<4));
+  const initialRoundValid=progress.roundNumber===1
+    && masteredIds.length===0 && wrongIds.length===0 && sessionIds.length===expectedIds.size;
+  const retryRoundValid=progress.roundNumber>1
+    && wrongIds.length===sessionIds.length
+    && wrongIds.every(id=>sessionIds.includes(id));
+  const activeValid=progress.phase==="in_progress"
+    && sessionIds.length>0
+    && Number.isInteger(progress.currentIndex)
+    && progress.currentIndex>=0 && progress.currentIndex<sessionIds.length
+    && answersValid
+    && !masteredIds.some(id=>sessionIds.includes(id))
+    && activePartition.size===expectedIds.size
+    && (initialRoundValid || retryRoundValid);
+  const isValid=baseValid && (resultValid || activeValid);
 
   if(!isValid){
     console.warn("保存済みの学習進捗が現在の問題構成と一致しないため削除しました。");
@@ -398,7 +443,28 @@ function restoreProgress(){
   roundNumber=progress.roundNumber;
   initialCompletionSent=Boolean(progress.initialCompletionSent);
   initialAttemptId=progress.initialAttemptId;
+  if(progress.phase==="in_progress"){
+    session=sessionIds.map(id=>{
+      const q=questionById.get(id);
+      return {q,opts:q.opts.slice(),ans:q.ans};
+    });
+    answers=storedAnswers.slice();
+    cur=progress.currentIndex;
+    el("tot").textContent=session.length;
+  }else{
+    session=[];
+    answers=[];
+    cur=0;
+  }
   el("learnerName").value=progress.learnerName.trim();
+  if(sourceKey===LEGACY_STORAGE_KEY){
+    try{
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(progress));
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+    }catch(error){
+      console.warn("旧形式の学習進捗を移行できませんでした。",error);
+    }
+  }
   renderSavedProgress();
   return true;
 }
@@ -410,12 +476,23 @@ function renderSavedProgress(){
     return;
   }
   panel.hidden=false;
+  if(savedProgress.phase==="in_progress"){
+    const answeredCount=savedProgress.answers.filter(answer=>answer!==null).length;
+    const questionNumber=savedProgress.currentIndex+1;
+    el("resumeSummary").textContent=
+      `${savedProgress.learnerName}さん：${savedProgress.sessionQuestionIds.length}問中${answeredCount}問回答済み。Q${questionNumber}から再開できます。`;
+    el("resumeBtn").textContent=`Q${questionNumber}から再開`;
+    el("resumeBtn").hidden=false;
+    updateResumeState();
+    return;
+  }
   const remaining=savedProgress.lastWrongIds.length;
   const masteredCount=savedProgress.masteredIds.length;
   el("resumeSummary").textContent=remaining
     ? `${savedProgress.learnerName}さん：50問中${masteredCount}問を習得済み。残り${remaining}問です。`
     : `${savedProgress.learnerName}さん：全50問を習得済みです。`;
   el("resumeBtn").hidden=remaining===0;
+  el("resumeBtn").textContent="前回の誤答から再開";
   updateResumeState();
 }
 
@@ -443,7 +520,8 @@ function renderQuestion(){
   el("prevBtn").disabled = cur===0;
   const answered = answers[cur]!==null;
   const nextBtn = el("nextBtn");
-  nextBtn.style.display = (answered && cur<session.length-1) ? "inline-block" : "none";
+  nextBtn.style.display = answered ? "inline-block" : "none";
+  nextBtn.textContent = cur<session.length-1 ? "次へ →" : "結果を見る →";
 
   el("qcard").innerHTML =
     `<div class="qmeta"><span class="qno">Q${pad(cur+1)}</span><span class="qtag">第${s.q.ch}章</span></div>
@@ -462,19 +540,39 @@ function renderQuestion(){
 function select(i){
   if(locking) return;
   answers[cur]=i;
+  saveProgress("in_progress");
   const card = el("qcard");
   card.querySelectorAll(".opt").forEach(o=>o.classList.toggle("sel",+o.dataset.i===i));
   locking=true;
   const advance=()=>{
     locking=false;
-    if(cur < session.length-1){ cur++; renderQuestion(); }
+    if(cur < session.length-1){
+      cur++;
+      saveProgress("in_progress");
+      renderQuestion();
+    }
     else { finish(); }
   };
   reduceMotion ? advance() : setTimeout(advance, ADVANCE_MS);
 }
 
-el("prevBtn").addEventListener("click",()=>{ if(!locking && cur>0){cur--;renderQuestion();} });
-el("nextBtn").addEventListener("click",()=>{ if(!locking && cur<session.length-1){cur++;renderQuestion();} });
+el("prevBtn").addEventListener("click",()=>{
+  if(!locking && cur>0){
+    cur--;
+    saveProgress("in_progress");
+    renderQuestion();
+  }
+});
+el("nextBtn").addEventListener("click",()=>{
+  if(locking || answers[cur]===null) return;
+  if(cur<session.length-1){
+    cur++;
+    saveProgress("in_progress");
+    renderQuestion();
+  }else{
+    finish();
+  }
+});
 
 async function notifyInitialCompletion(correct){
   const status = el("notifyStatus");
@@ -553,7 +651,7 @@ function finish(){
     initialCompletionSent=true;
     shouldNotify=true;
   }
-  saveProgress();
+  saveProgress("result");
   if(shouldNotify) notifyInitialCompletion(correct);
   show("result");
   window.scrollTo({top:0,behavior:reduceMotion?"auto":"smooth"});
@@ -570,11 +668,15 @@ el("startBtn").addEventListener("click",()=>{
   if(savedProgress && !window.confirm("保存済みの学習履歴を削除し、最初の50問から開始しますか？")) return;
   clearSavedProgress();
   buildInitialSession();
+  saveProgress("in_progress");
   beginRound();
 });
 el("resumeBtn").addEventListener("click",()=>{
   if(!savedProgress || el("resumeBtn").disabled || !restoreProgress()) return;
-  makeRound(lastWrong);
+  if(savedProgress.phase==="result"){
+    makeRound(lastWrong);
+    saveProgress("in_progress");
+  }
   beginRound();
 });
 el("clearProgressBtn").addEventListener("click",()=>{
@@ -596,6 +698,7 @@ el("retryBtn").addEventListener("click",()=>{
     buildInitialSession();
   }
   else makeRound(lastWrong);
+  saveProgress("in_progress");
   beginRound();
 });
 
