@@ -4,8 +4,8 @@ JSTQB Foundation Level（CTFL v4.0）第1章・第2章を対象とした、新�
 
 ## 公開ファイル
 
-- `index.html`：GitHub Pagesの入口
-- `JSTQB_FL_1-2章_確認ドリル.html`：本番ドリル
+- `index.html`：GitHub Pagesで公開する本番ドリル
+- `JSTQB_FL_1-2章_確認ドリル.html`：旧URLからルートURLへ転送する互換ページ
 - `JSTQB_FL_1-2章_4択問題バンク.md`：全50問と解答・解説のマスター
 
 ## 学習フロー
@@ -41,6 +41,8 @@ GASのソースと運用手順は `gas/` に保存しています。Slack Incomi
 ## GitHub Pages
 
 `main` ブランチの `/(root)` を公開元に設定します。Jekyllによる変換は使用しません。
+
+公開URLは `https://jqit-qa.github.io/jstqb-drills/` です。日本語ファイル名を含む旧URLへアクセスした場合も、このルートURLへ転送します。
 
 ## 検証
 

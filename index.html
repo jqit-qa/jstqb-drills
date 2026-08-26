@@ -2,11 +2,727 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="refresh" content="0; url=JSTQB_FL_1-2章_確認ドリル.html">
-<title>JSTQB FL 第1章・第2章 確認ドリル</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>JSTQB FL 確認ドリル｜第1章・第2章</title>
+<style>
+  :root{
+    --bg:#e9ecf2;--surface:#ffffff;--ink:#182031;--muted:#5f6b80;--line:#e1e5ee;
+    --accent:#3a56d4;--accent-tint:#e9edff;
+    --pass:#2b8a4a;--pass-tint:#e6f4ea;--fail:#cf4040;--fail-tint:#fbeaea;
+    --radius:16px;--shadow:0 1px 2px rgba(24,32,49,.05),0 10px 30px rgba(24,32,49,.07);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Noto Sans JP",Meiryo,sans-serif;
+    line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh;overscroll-behavior-y:contain}
+  button{-webkit-tap-highlight-color:transparent}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+  header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:none}
+  header.on{display:block}
+  .bar{max-width:640px;margin:0 auto;padding:12px 22px;display:flex;align-items:center;gap:14px}
+  .kicker{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em;color:var(--accent);text-transform:uppercase;margin-right:auto}
+  .syllabus-link{font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;white-space:nowrap}
+  .syllabus-link:hover{text-decoration:underline}
+  .count{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--muted);white-space:nowrap}
+  .count b{color:var(--ink)}
+  .track{width:120px;height:6px;background:var(--line);border-radius:999px;overflow:hidden}
+  .track>span{display:block;height:100%;width:0;background:var(--accent);transition:width .3s ease}
+
+  main{max-width:640px;margin:0 auto;padding:30px 22px calc(60px + env(safe-area-inset-bottom, 0px))}
+
+  /* start */
+  #start{display:none;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:30px 28px}
+  #start.on{display:block}
+  #start .eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em;color:var(--accent);text-transform:uppercase}
+  #start h1{font-size:27px;line-height:1.25;margin:6px 0 4px;letter-spacing:-.01em}
+  #start .sub{color:var(--muted);font-size:14px;margin:0 0 20px}
+  .rules{list-style:none;padding:0;margin:0 0 24px;display:flex;flex-direction:column;gap:11px}
+  .rules li{display:flex;gap:12px;align-items:flex-start;font-size:14.5px}
+  .rules .ic{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;color:var(--accent);background:var(--accent-tint);border-radius:8px;width:26px;height:26px;flex:none;display:grid;place-items:center;font-size:13px}
+  .browser-note{border:1px solid #ead79b;border-radius:12px;background:#fff8df;color:#695514;padding:12px 14px;margin:0 0 20px;font-size:13px}
+  .browser-note strong{display:block;color:#4f400f;margin-bottom:2px}
+  .prep{border:1px solid var(--line);border-radius:12px;background:#fafbff;padding:16px;margin:0 0 20px}
+  .prep label{display:block;font-size:14px;font-weight:600;margin-bottom:8px}
+  .prep input[type="text"]{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font:inherit;margin-bottom:12px}
+  .prep .check{display:flex;align-items:flex-start;gap:9px;font-weight:400;margin:0}
+  .prep .check input{margin-top:5px}
+  .prep a{color:var(--accent);font-weight:700}
+  .privacy-note{font-size:12px;color:var(--muted);margin:10px 0 0}
+  .resume-panel{border:1px solid #b9c5ff;border-radius:12px;background:var(--accent-tint);padding:16px;margin:0 0 20px}
+  .resume-panel strong{display:block;font-size:14.5px;margin-bottom:4px}
+  .resume-panel p{font-size:13px;color:var(--muted);margin:0 0 12px}
+  .resume-panel .resume-hint{font-size:12px;color:var(--fail);margin:-4px 0 10px}
+  .resume-actions{display:flex;flex-wrap:wrap;gap:8px}
+  .resume-actions button{font:inherit;font-size:13px;font-weight:700;border-radius:9px;padding:9px 12px;min-height:44px;cursor:pointer}
+  .resume-primary{border:1px solid var(--accent);background:var(--accent);color:#fff}
+  .resume-secondary{border:1px solid #b9c2dc;background:#fff;color:var(--ink)}
+  .resume-actions button:disabled{opacity:.45;cursor:not-allowed}
+  .source-note{font-size:12.5px;color:var(--muted);margin:12px 0 0}
+
+  /* question */
+  #quiz{display:none}
+  #quiz.on{display:block}
+  .qcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 26px 22px;animation:rise .28s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .qmeta{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .qno{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:12px;color:#fff;background:var(--ink);border-radius:7px;padding:4px 9px}
+  .qtag{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+  .qtext{font-size:17px;font-weight:600;line-height:1.5;margin:0 0 20px}
+  .qhint{display:flex;align-items:center;gap:9px;margin:-7px 0 18px;padding:10px 12px;border-radius:10px;background:#f7f8fc;font-size:13px;color:var(--muted)}
+  .qhint .label{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-tint);border-radius:6px;padding:2px 7px}
+  .qhint a{color:var(--accent);font-weight:700;text-decoration:none}
+  .qhint a:hover{text-decoration:underline}
+  .opts{display:flex;flex-direction:column;gap:10px}
+  .opt{display:flex;align-items:flex-start;gap:13px;border:1.5px solid var(--line);border-radius:12px;padding:14px 15px;cursor:pointer;background:#fff;text-align:left;font:inherit;color:inherit;transition:border-color .12s,background .12s,transform .08s}
+  .opt:hover{border-color:#b9c2dc;background:#fafbff}
+  .opt .key{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:14px;width:27px;height:27px;flex:none;display:grid;place-items:center;border:1.5px solid var(--line);border-radius:8px;color:var(--muted);transition:.12s}
+  .opt .txt{font-size:15px;padding-top:1px}
+  .opt.sel{border-color:var(--accent);background:var(--accent-tint)}
+  .opt.sel .key{background:var(--accent);border-color:var(--accent);color:#fff}
+  .opt.sel .txt{font-weight:600}
+  .opt.sel::after{content:"✓";margin-left:auto;color:var(--accent);font-weight:800;font-size:18px;line-height:1;animation:check-pop .18s ease-out}
+  @keyframes check-pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+  .opt:focus-visible{outline:3px solid var(--accent-tint);outline-offset:2px}
+
+  .nav{display:flex;align-items:center;margin-top:22px}
+  button.nav-btn{font-family:inherit;font-size:14px;font-weight:600;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:14px 20px;min-height:44px;cursor:pointer;transition:.14s}
+  button.nav-btn:hover{border-color:#b9c2dc;background:#fafbff}
+  button.nav-btn:disabled{opacity:.4;cursor:not-allowed}
+  .nav .spacer{flex:1}
+  .nav .next{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .nav .next:hover{background:#2f47b8}
+
+  /* result */
+  #result{display:none}
+  #result.on{display:block}
+  .rcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:30px 28px}
+  .verdict{font-weight:700;font-size:15px;letter-spacing:.06em;padding:8px 16px;border-radius:999px;display:inline-block}
+  .verdict.pass{color:var(--pass);background:var(--pass-tint)}
+  .verdict.fail{color:var(--fail);background:var(--fail-tint)}
+  .rscore{display:flex;align-items:baseline;gap:10px;margin:16px 0 4px}
+  .rscore .pct{font-size:46px;font-weight:700;line-height:1}
+  .rscore .frac{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted);font-size:14px}
+  .rmsg{font-size:14.5px;color:var(--muted);margin:2px 0 20px}
+  .rmsg b{color:var(--ink)}
+  .statusbar{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 8px}
+  .cell{width:16px;height:16px;border-radius:4px;background:var(--line)}
+  .cell.ok{background:var(--pass)}.cell.ng{background:var(--fail)}
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-bottom:24px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:10px;height:10px;border-radius:3px}.dot.ok{background:var(--pass)}.dot.ng{background:var(--fail)}
+  .review h3{font-size:15px;margin:0 0 4px}
+  .review p.lead{font-size:13.5px;color:var(--muted);margin:0 0 12px}
+  .refrow{display:flex;gap:12px;align-items:baseline;padding:10px 0;border-top:1px solid var(--line)}
+  .refrow .sec{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;color:var(--accent);flex:none;min-width:52px}
+  .refrow .qs{font-size:13.5px;color:var(--muted)}
+  .allclear{padding:18px;border:1px dashed var(--pass);border-radius:12px;background:var(--pass-tint);color:var(--pass);font-weight:600;font-size:14.5px;text-align:center}
+  .retry{margin-top:26px;width:100%;background:var(--accent);color:#fff;border:none;border-radius:12px;padding:14px;font:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:.14s}
+  .retry:hover{background:#2f47b8}
+  .notify{margin-top:16px;padding:11px 13px;border-radius:10px;background:#f4f6fa;color:var(--muted);font-size:12.5px}
+  .notify.ok{background:var(--pass-tint);color:var(--pass)}
+  .notify.warn{background:#fff4d8;color:#795b00}
+  .notify.error{background:var(--fail-tint);color:var(--fail)}
+
+  .btn-primary{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:14px 24px;font:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:.14s}
+  .btn-primary:hover{background:#2f47b8}
+
+  .opt,
+  button.nav-btn,
+  .retry,
+  .btn-primary,
+  .resume-actions button,
+  .prep .check{touch-action:manipulation}
+
+  .opt:not(:disabled):active,
+  button.nav-btn:not(:disabled):active,
+  .retry:not(:disabled):active,
+  .btn-primary:not(:disabled):active,
+  .resume-actions button:not(:disabled):active{transform:scale(.985);filter:brightness(.96)}
+
+  @media(max-width:520px){#start h1{font-size:23px}.qtext{font-size:16px}.rscore .pct{font-size:38px}.bar{gap:9px}.track{width:72px}.kicker{display:none}}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
 </head>
 <body>
-<p><a href="JSTQB_FL_1-2章_確認ドリル.html">JSTQB FL 第1章・第2章 確認ドリルを開く</a></p>
+
+<header id="hdr">
+  <div class="bar">
+    <span class="kicker">JSTQB FL 確認ドリル</span>
+    <a class="syllabus-link" href="https://jstqb.jp/dl/JSTQB-SyllabusFoundation_VersionV40.J02.pdf" target="_blank" rel="noopener noreferrer">シラバスを開く ↗</a>
+    <span class="count">Q <b id="cur">1</b> / <span id="tot">50</span></span>
+    <span class="track"><span id="fill"></span></span>
+  </div>
+</header>
+
+<main>
+  <!-- START -->
+  <section id="start">
+    <span class="eyebrow">JSTQB Foundation Level ・ 第1章／第2章</span>
+    <h1>テストの基礎とライフサイクル<br>確認ドリル</h1>
+    <p class="sub">50問の4択ドリル。全問正解になるまで、誤答だけを繰り返します。</p>
+    <ul class="rules">
+      <li><span class="ic">1</span><span>最初に公式シラバスの<b>第1章・第2章を読んで</b>ください。ドリル中も参照できます。</span></li>
+      <li><span class="ic">2</span><span>全50問を<b>シラバスのページ・節番号順</b>に出題します。選択肢はAからDの固定順です。</span></li>
+      <li><span class="ic">3</span><span>初回の50問を最後まで終えると、<b>リーダー宛に完了通知</b>が送られます。</span></li>
+      <li><span class="ic">✓</span><span>誤答だけをやり直し、<b>全50問正解</b>になるまで繰り返します。</span></li>
+    </ul>
+    <p class="browser-note"><strong>ご利用上の注意</strong>必ずSafari／Chromeなどの標準ブラウザで開いてください。Slackやメールなどのアプリ内ブラウザでは保存領域が別になり、途中離脱後に結果を再開できない可能性があります。</p>
+    <div class="resume-panel" id="resumePanel" hidden>
+      <strong>前回の学習履歴があります</strong>
+      <p id="resumeSummary"></p>
+      <p class="resume-hint" id="resumeHint" hidden></p>
+      <div class="resume-actions">
+        <button class="resume-primary" id="resumeBtn" type="button">前回の誤答から再開</button>
+        <button class="resume-secondary" id="clearProgressBtn" type="button">履歴を消して最初から</button>
+      </div>
+    </div>
+    <div class="prep">
+      <label for="learnerName">受講者名</label>
+      <input id="learnerName" type="text" maxlength="80" autocomplete="name" placeholder="例：山田 太郎">
+      <label class="check"><input id="readSyllabus" type="checkbox"><span><a href="https://jstqb.jp/dl/JSTQB-SyllabusFoundation_VersionV40.J02.pdf" target="_blank" rel="noopener noreferrer">JSTQB公式シラバス</a>の第1章・第2章を読みました</span></label>
+      <p class="privacy-note">受講者名・回答途中の位置・選択内容・学習進捗を、このブラウザ内に保存します。別の端末やブラウザには引き継がれません。</p>
+    </div>
+    <button class="btn-primary" id="startBtn" type="button" disabled>50問をはじめる</button>
+    <p class="source-note">準拠：JSTQB Foundation Level シラバス Version 2023V4.0.J02。シラバス改訂時は、問題・正答・節番号の再確認と更新が必要です。</p>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="quiz">
+    <div class="qcard" id="qcard"></div>
+    <div class="nav">
+      <button class="nav-btn" id="prevBtn" type="button">← 戻る</button>
+      <span class="spacer"></span>
+      <button class="nav-btn next" id="nextBtn" type="button" style="display:none">次へ →</button>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="result" aria-live="polite">
+    <div class="rcard">
+      <div id="verdict" class="verdict"></div>
+      <div class="rscore"><span class="pct" id="pct"></span><span class="frac" id="frac"></span></div>
+      <p class="rmsg" id="rmsg"></p>
+      <div class="statusbar" id="statusbar" aria-hidden="true"></div>
+      <div class="legend"><span><i class="dot ok"></i>正解</span><span><i class="dot ng"></i>不正解</span></div>
+      <div class="review">
+        <h3>復習ポイント</h3>
+        <p class="lead">間違えた問題に対応するシラバスの節を読み直してから、誤答だけをやり直してください。</p>
+        <div id="reviewlist"></div>
+      </div>
+      <div class="notify" id="notifyStatus" hidden></div>
+      <button class="retry" id="retryBtn" type="button"></button>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ====== 設定（ここを変えれば調整できます） ====== */
+const DRAW_CH1 = 25;   // 第1章から出題する数
+const DRAW_CH2 = 25;   // 第2章から出題する数
+const PASS_ALL = true; // true=全問正解で合格 / false のとき下の割合を使用
+const PASS_PCT = 80;   // PASS_ALL=false のときの合格ライン(%)
+const ADVANCE_MS = 320;// 選択してから次問へ進むまでの待ち時間(ms)
+const STORAGE_VERSION = 2;
+const STORAGE_KEY = "jstqb-fl-ch1-2-progress-v2";
+const LEGACY_STORAGE_KEY = "jstqb-fl-ch1-2-progress-v1";
+// Slackへ直接送らず、認証情報を保持する社内の通知中継URLを指定してください。
+// 空文字のままなら通知を送らず、ドリルは通常どおり続行します。
+const SLACK_NOTIFY_URL = "https://script.google.com/macros/s/AKfycbygAfjSXMDKffFoNqGw2AsGSTtw8thyIPcbm3AdxaZE4aGuikqflrrCPYrJxQ818n_K/exec";
+const SYLLABUS_VERSION = "JSTQB Foundation Level Version 2023V4.0.J02";
+const SYLLABUS_URL = "https://jstqb.jp/dl/JSTQB-SyllabusFoundation_VersionV40.J02.pdf";
+/* ============================================== */
+
+// 公式シラバス Version 2023V4.0.J02 の目次に記載された各節の開始ページ。
+// シラバス改訂時は QUESTIONS と同時に見直してください。
+const SYLLABUS_PAGES = {
+  "1.1.1":16, "1.1.2":17,
+  "1.2.1":17, "1.2.2":18, "1.2.3":18,
+  "1.3":18,
+  "1.4.1":19, "1.4.2":20, "1.4.3":21, "1.4.4":21, "1.4.5":22,
+  "1.5.1":22, "1.5.2":23, "1.5.3":23,
+  "2.1.1":26, "2.1.2":26, "2.1.3":27, "2.1.4":27, "2.1.5":28, "2.1.6":28,
+  "2.2.1":29, "2.2.2":30, "2.2.3":31,
+  "2.3":31
+};
+
+const QUESTIONS = [
+  {id:1,ch:1,ref:"1.1.1",ans:2,q:"ソフトウェアテストの目的として、最も適切でないものはどれか。",opts:["欠陥を検出する","対象の品質に対する信頼を積み上げる","コードからすべての欠陥を取り除いたことを証明する","意思決定のための情報を提供する"]},
+  {id:2,ch:1,ref:"1.1.2",ans:3,q:"「テスト」と「デバッグ」の違いとして正しいものはどれか。",opts:["デバッグはテスト担当者、テストは開発者が行うと決まっている","テストは欠陥を修正する活動、デバッグは欠陥を見つける活動である","テストとデバッグは同じ意味である","テストは故障を引き起こして欠陥の存在を示し、デバッグは欠陥の原因を特定して修正する"]},
+  {id:3,ch:1,ref:"1.2.3",ans:1,q:"人がエラー(誤り)を犯した結果、成果物の中に作り込まれる不具合を何と呼ぶか。",opts:["エラー(error)","欠陥(defect)","故障(failure)","根本原因(root cause)"]},
+  {id:4,ch:1,ref:"1.2.3",ans:3,q:"欠陥が実行されたときに現れる、期待した動作からのずれを何と呼ぶか。",opts:["エラー","欠陥","根本原因","故障(failure)"]},
+  {id:5,ch:1,ref:"1.2.3",ans:3,q:"エラー・欠陥・故障の一般的な因果関係の順序として正しいものはどれか。",opts:["欠陥 → エラー → 故障","故障 → 欠陥 → エラー","エラー → 故障 → 欠陥","エラー → 欠陥 → 故障"]},
+  {id:6,ch:1,ref:"1.2.3",ans:2,q:"故障は欠陥だけが原因で起こるとは限らない。欠陥以外に故障を引き起こし得る要因として、シラバスで挙げられているものはどれか。",opts:["要件レビューの省略","テスト担当者の経験不足","環境条件(放射線、電磁波、汚染など)","プロジェクトの予算超過"]},
+  {id:7,ch:1,ref:"1.2.3",ans:3,q:"根本原因(root cause)分析を行う主な目的はどれか。",opts:["見つかった欠陥をできるだけ早く修正するため","故障の再現手順を記録するため","テストケースの数を増やすため","問題を引き起こした根本の原因を特定し、同種の問題の再発を防ぐため"]},
+  {id:8,ch:1,ref:"1.2.2",ans:1,q:"品質保証(QA)・品質コントロール(QC)・テストの関係として正しいものはどれか。",opts:["QCはプロセス、QAはプロダクトに焦点を当てる","QAはプロセス指向で欠陥の作り込みを防ぐことに焦点を当て、QCはプロダクト指向であり、テストはQCの一形態である","テストはQAより広い概念で、QAを包含する","QAとテストは完全に同じものである"]},
+  {id:9,ch:1,ref:"1.3",ans:0,q:"原則「テストは欠陥があることは示せるが、欠陥がないことは示せない」が意味することとして最も適切なものはどれか。",opts:["テストで故障が見つからなくても、欠陥がないことの証明にはならない","テストをすればバグはゼロになる","テストは無意味である","欠陥がないことを証明するのがテストの目的である"]},
+  {id:10,ch:1,ref:"1.3",ans:0,q:"原則「全数テストは不可能である」の帰結として正しいものはどれか。",opts:["すべての入力と条件の組み合わせをテストするのは現実的でないため、リスクや優先度に基づいてテストを絞り込む","自動化すれば全数テストが可能になる","重要な機能だけは全数テストすべきである","テストは行うべきではない"]},
+  {id:11,ch:1,ref:"1.3",ans:1,q:"原則「早期テストで時間とコストを節約する」を実践する例として最も適切なものはどれか。",opts:["コードが完成するまでテスト活動を一切始めない","要件や設計の段階からレビューなどの静的テストを行い、欠陥を早期に見つける","すべてのテストをリリース直前にまとめて実施する","本番環境でのみテストを行う"]},
+  {id:12,ch:1,ref:"1.3",ans:0,q:"原則「欠陥の偏在」が示唆することはどれか。",opts:["少数のモジュールに欠陥が集中する傾向があり、そこにテストを重点配分すると効率的である","欠陥の数はモジュールの規模に必ず比例する","欠陥は時間とともに自然に消える","欠陥はすべてのモジュールに均等に分布する"]},
+  {id:13,ch:1,ref:"1.3",ans:3,q:"「殺虫剤のパラドックス」を回避するための対策として適切なものはどれか。",opts:["テストの回数を減らす","同じテストケースを繰り返し実行し続ける","テストケースを一切変更しない","テストケースを定期的に見直し、追加・改訂して新しい欠陥を見つけられるようにする"]},
+  {id:14,ch:1,ref:"1.3",ans:2,q:"原則「テストは状況次第」の例として正しいものはどれか。",opts:["どんなシステムでも同じテストのやり方をすべきである","状況にかかわらず全数テストを行う","安全性が重要な医療システムと社内向けの簡単なツールでは、テストの進め方や厳密さが異なる","テストのやり方は世界共通で1つに決まっている"]},
+  {id:15,ch:1,ref:"1.3",ans:3,q:"「欠陥ゼロの落とし穴(absence-of-defects fallacy)」が警告していることはどれか。",opts:["欠陥をすべて見つけて修正すれば、必ず良いシステムになる","テストをすれば欠陥はゼロになる","欠陥は無視してよい","欠陥をすべて修正しても、ユーザーのニーズや要件を満たしていなければ役に立たない"]},
+  {id:16,ch:1,ref:"1.3",ans:0,q:"次のうち、JSTQBの「テストの7原則」に含まれないものはどれか。",opts:["テストを自動化すれば欠陥はゼロになる","早期テストで時間とコストを節約する","テストは状況次第である","欠陥の偏在"]},
+  {id:17,ch:1,ref:"1.4.1",ans:1,q:"「テストベースを分析し、テスト対象となる条件(テスト条件)を識別する」活動はどれか。",opts:["テスト計画","テスト分析","テスト設計","テスト実行"]},
+  {id:18,ch:1,ref:"1.4.1",ans:0,q:"「テスト条件をもとに、具体的なテストケースを作成する」活動はどれか。",opts:["テスト設計","テスト実装","テスト分析","テスト完了"]},
+  {id:19,ch:1,ref:"1.4.1",ans:1,q:"「テストの進捗を継続的に確認し、計画からの乖離があれば是正する」活動はどれか。",opts:["テスト完了","テストのモニタリングとコントロール","テスト計画","テスト実行"]},
+  {id:20,ch:1,ref:"1.4.3",ans:3,q:"テスト活動の成果物(テスト計画書、テストケース、テストログなど)を総称して何と呼ぶか。",opts:["テストベース","テストハーネス","テストオラクル","テストウェア"]},
+  {id:21,ch:1,ref:"1.4.4",ans:0,q:"トレーサビリティ(追跡可能性)を確保する利点として、適切でないものはどれか。",opts:["欠陥を自動的に修正できる","変更が生じたときの影響範囲を分析しやすくなる","テストの進捗や結果を要件やリスクに関連づけて報告できる","要件がテストで十分にカバーされているかを確認できる"]},
+  {id:22,ch:1,ref:"1.5.3",ans:1,q:"テストの独立性(independence of testing)について正しいものはどれか。",opts:["独立性が高いほど、あらゆる面で常に良い","開発者自身によるテストは独立性が低く思い込みで欠陥を見逃しやすいが、コストが低く早期に実施できる利点がある","独立したテストチームを持つとデメリットしかない","独立性はテストの品質に影響しない"]},
+  {id:23,ch:1,ref:"1.5.2",ans:2,q:"「ホールチーム(whole team)アプローチ」の考え方として正しいものはどれか。",opts:["テストはテスト担当者だけの責任である","品質は品質保証部門だけが担当する","チーム全員(開発者・テスター・ビジネス代表など)が品質に責任を持ち、協力してテストに取り組む","開発者はテストに関与しない"]},
+  {id:24,ch:2,ref:"2.1.1",ans:0,q:"SDLCモデルとテストの関係として正しいものはどれか。",opts:["シーケンシャル（ウォーターフォール等）なモデルと、イテレーティブ／インクリメンタルなモデルでは、テストの実施タイミングや形態が異なる","どのモデルでもテストは最後にまとめて行う","選択するSDLCモデルはテストの進め方に影響しない","アジャイル開発ではテストを行わない"]},
+  {id:25,ch:2,ref:"2.1.5",ans:3,q:"「シフトレフト(shift-left)」の考え方を最もよく表しているものはどれか。",opts:["テスト担当者を増員する","テストを開発の後工程に集中させる","リリース後に本番でテストする","テスト活動をライフサイクルのより早い段階に前倒しし、欠陥を早期に見つける"]},
+  {id:26,ch:2,ref:"2.1.3",ans:1,q:"テスト駆動開発(TDD)の進め方として正しいものはどれか。",opts:["コードを書いた後にテストを書く","まずテスト(自動テスト)を書き、それを満たすように少しずつコードを実装する","テストを書かずにコードだけを書く","リリース後にテストを追加する"]},
+  {id:27,ch:2,ref:"2.1.3",ans:3,q:"受け入れテスト駆動開発(ATDD)や振る舞い駆動開発(BDD)に共通する特徴はどれか。",opts:["コードを書いてからテストを設計する","非機能要件のみを対象とする","テストを一切自動化しない","開発の初期に、関係者が期待する振る舞いや受け入れ基準を先に定義し、それをテストとして表現する"]},
+  {id:28,ch:2,ref:"2.1.6",ans:0,q:"「レトロスペクティブ(振り返り)」の主な目的はどれか。",opts:["何がうまくいき何を改善できるかをチームで振り返り、プロセスを継続的に改善する","欠陥を修正する","テストケースの数を数える","個人の失敗の責任を追及する"]},
+  {id:29,ch:2,ref:"2.2.1",ans:1,q:"次のテストレベルを、一般的に実施される順序(小さい単位 → 大きい単位)に並べたものはどれか。",opts:["システムテスト → コンポーネントテスト → 受け入れテスト → 統合テスト","コンポーネントテスト → 統合テスト → システムテスト → 受け入れテスト","受け入れテスト → システムテスト → 統合テスト → コンポーネントテスト","統合テスト → コンポーネントテスト → システムテスト → 受け入れテスト"]},
+  {id:30,ch:2,ref:"2.2.1",ans:0,q:"個々のモジュール(部品)が単体で正しく動作するかを検証するテストレベルはどれか。",opts:["コンポーネントテスト(単体テスト)","システムテスト","統合テスト","受け入れテスト"]},
+  {id:31,ch:2,ref:"2.2.1",ans:3,q:"複数のコンポーネントやシステム間の「連携・インターフェース」に着目してテストするレベルはどれか。",opts:["コンポーネントテスト","受け入れテスト","システムテスト","統合テスト"]},
+  {id:32,ch:2,ref:"2.2.1",ans:2,q:"システム全体が要件どおりに振る舞うかを、エンドツーエンドで検証するテストレベルはどれか。",opts:["コンポーネントテスト","受け入れテスト","システムテスト","コンポーネント統合テスト"]},
+  {id:33,ch:2,ref:"2.2.1",ans:1,q:"主に利用者や顧客が「実際の業務で使えるか」「受け入れられるか」を確認するテストレベルはどれか。",opts:["統合テスト","受け入れテスト","システムテスト","コンポーネントテスト"]},
+  {id:34,ch:2,ref:"2.2.1",ans:1,q:"開発組織の「社内(開発者の拠点)」で、実際のユーザーに近い立場の人が本番に近い環境で行う受け入れテストの形態はどれか。",opts:["ベータテスト","アルファテスト","契約による受け入れテスト","運用受け入れテスト"]},
+  {id:35,ch:2,ref:"2.2.1",ans:2,q:"実際のユーザーが「自分の環境」でソフトウェアを使用してフィードバックする受け入れテストの形態はどれか。",opts:["アルファテスト","規制による受け入れテスト","ベータテスト","運用受け入れテスト(OAT)"]},
+  {id:36,ch:2,ref:"2.2.1",ans:2,q:"バックアップ・リストア、セキュリティ、性能など「運用担当者の観点」で運用に耐えるかを確認する受け入れテストはどれか。",opts:["ユーザー受け入れテスト(UAT)","アルファテスト","運用受け入れテスト(OAT)","契約による受け入れテスト"]},
+  {id:37,ch:2,ref:"2.2.2",ans:3,q:"「システムが何をするか(機能要件)」を確認するテストタイプはどれか。",opts:["保守テスト","非機能テスト","ホワイトボックステスト","機能テスト"]},
+  {id:38,ch:2,ref:"2.2.2",ans:0,q:"性能、使用性(ユーザビリティ)、セキュリティ、信頼性など「システムがどれだけうまく動くか」を評価するテストタイプはどれか。",opts:["非機能テスト","確認テスト","機能テスト","リグレッションテスト"]},
+  {id:39,ch:2,ref:"2.2.2",ans:0,q:"プログラムの内部構造(コード、分岐、ロジック)に基づいてテストを設計する技法の分類はどれか。",opts:["ホワイトボックステスト","機能テスト","ブラックボックステスト","受け入れテスト"]},
+  {id:40,ch:2,ref:"2.2.2",ans:1,q:"仕様や要件など「外部から見た振る舞い」に基づき、内部構造を意識せずにテストを設計する分類はどれか。",opts:["統合テスト","ブラックボックステスト","保守テスト","ホワイトボックステスト"]},
+  {id:41,ch:2,ref:"2.2.3",ans:2,q:"欠陥を修正した後、「その欠陥が確かに直っていること」を確認するために行うテストはどれか。",opts:["受け入れテスト","リグレッションテスト","確認テスト(リテスト)","非機能テスト"]},
+  {id:42,ch:2,ref:"2.2.3",ans:3,q:"変更(修正や機能追加)によって、「これまで正しく動いていた部分に新たな不具合が生じていないか」を確認するテストはどれか。",opts:["確認テスト","コンポーネントテスト","アルファテスト","リグレッションテスト"]},
+  {id:43,ch:2,ref:"2.2.3",ans:2,q:"リグレッションテストが自動化の対象として適している主な理由はどれか。",opts:["一度きりしか実行しないから","実行結果が毎回変わるから","変更のたびに繰り返し実行され、同じテストを何度も行うため","手動でしか実行できないから"]},
+  {id:44,ch:2,ref:"2.3",ans:2,q:"本番運用中のシステムに対し、修正・機能追加・環境移行などの変更が行われた際に実施するテストはどれか。",opts:["確認テスト","コンポーネントテスト","保守テスト","アルファテスト"]},
+  {id:45,ch:2,ref:"2.3",ans:1,q:"保守テストにおける「影響度分析(impact analysis)」の目的はどれか。",opts:["本番環境を停止する","変更がシステムのどの部分に影響するかを特定し、必要なリグレッションテストの範囲を決める","テスト担当者を評価する","欠陥を自動修正する"]},
+  {id:46,ch:1,ref:"1.4.2",ans:0,q:"テストプロセスの進め方を決める際に考慮する要因として、最も適切なものはどれか。",opts:["ステークホルダー、開発ライフサイクル、プロダクト、リスクなどのコンテキスト","常に同じ手順と成果物を使うこと","テスト担当者個人の好みだけ","テスト担当者個人の経験年数だけ"]},
+  {id:47,ch:1,ref:"1.5.1",ans:2,q:"テスト担当者に求められる汎用的なスキルの組み合わせとして、最も適切なものはどれか。",opts:["プログラミング知識だけ","欠陥を見つけても伝えない能力","テスト知識、注意深さ・好奇心、コミュニケーション、分析的・批判的思考など","仕様を確認せず直感だけで判断する能力"]},
+  {id:48,ch:2,ref:"2.1.2",ans:2,q:"SDLCモデルに関係なく適用できる、よいテストの実践例はどれか。",opts:["テスト担当者を開発活動から完全に切り離す","動的テストをリリース直前だけに行う","各開発活動に対応するテスト活動を設け、テスト分析や設計を対応する開発フェーズ中に始める","すべてのテストレベルで同じ目的のテストを重複して行う"]},
+  {id:49,ch:2,ref:"2.1.4",ans:1,q:"DevOpsがテストにもたらす代表的な効果として、最も適切なものはどれか。",opts:["手動テストだけに限定する","迅速なフィードバックやCI/CDを通じて、高品質なコードをより速くビルド・テスト・リリースしやすくする","開発と運用の協力を不要にする","テストの独立性を必ず最大にする"]},
+  {id:50,ch:2,ref:"2.2.1",ans:0,q:"テスト対象システムと、他のシステムや外部サービスとのインターフェースに焦点を当てるテストレベルはどれか。",opts:["システム統合テスト","コンポーネント統合テスト","システムテスト","受け入れテスト"]}
+];
+
+const KEYS = ["A","B","C","D"];
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const el = id => document.getElementById(id);
+let session=[], answers=[], initialQuestions=[], lastWrong=[];
+let cur=0, locking=false, roundNumber=0, initialCompletionSent=false, initialAttemptId="";
+let mastered = new Set();
+let savedProgress = null;
+
+function pad(n){return String(n).padStart(2,"0");}
+function syllabusPage(ref){return SYLLABUS_PAGES[ref];}
+function syllabusOrder(a,b){
+  return syllabusPage(a.ref)-syllabusPage(b.ref)
+    || a.ref.localeCompare(b.ref,undefined,{numeric:true})
+    || a.id-b.id;
+}
+
+function makeRound(questions){
+  session = questions.slice().sort(syllabusOrder).map(q=>({q,opts:q.opts.slice(),ans:q.ans}));
+  answers = new Array(session.length).fill(null);
+  cur = 0;
+  roundNumber++;
+  el("tot").textContent = session.length;
+}
+
+function initialQuestionPool(){
+  const ch1 = QUESTIONS.filter(q=>q.ch===1).slice(0,DRAW_CH1);
+  const ch2 = QUESTIONS.filter(q=>q.ch===2).slice(0,DRAW_CH2);
+  if(ch1.length!==DRAW_CH1 || ch2.length!==DRAW_CH2){
+    throw new Error("設定した出題数に対して問題バンクが不足しています。");
+  }
+  return ch1.concat(ch2);
+}
+
+function buildInitialSession(){
+  initialQuestions = initialQuestionPool();
+  mastered = new Set();
+  roundNumber = 0;
+  initialCompletionSent = false;
+  initialAttemptId = window.crypto?.randomUUID?.()
+    || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  lastWrong = [];
+  el("notifyStatus").hidden = true;
+  makeRound(initialQuestions);
+}
+
+function saveProgress(phase="result"){
+  if(!initialQuestions.length) return;
+  const inProgress=phase==="in_progress";
+  const progress = {
+    version:STORAGE_VERSION,
+    phase,
+    learnerName:el("learnerName").value.trim(),
+    initialQuestionIds:initialQuestions.map(q=>q.id),
+    masteredIds:[...mastered],
+    lastWrongIds:lastWrong.map(q=>q.id),
+    sessionQuestionIds:inProgress?session.map(s=>s.q.id):[],
+    answers:inProgress?answers.slice():[],
+    currentIndex:inProgress?cur:0,
+    roundNumber,
+    initialCompletionSent,
+    initialAttemptId,
+    savedAt:new Date().toISOString()
+  };
+  try{
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(progress));
+    savedProgress=progress;
+    renderSavedProgress();
+  }catch(error){
+    console.warn("学習進捗を保存できませんでした。",error);
+  }
+}
+
+function clearSavedProgress(){
+  try{
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  }
+  catch(error){ console.warn("学習進捗を削除できませんでした。",error); }
+  savedProgress=null;
+  renderSavedProgress();
+}
+
+function restoreProgress(){
+  let progress,sourceKey;
+  try{
+    sourceKey=STORAGE_KEY;
+    let raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw){
+      sourceKey=LEGACY_STORAGE_KEY;
+      raw=localStorage.getItem(LEGACY_STORAGE_KEY);
+    }
+    if(!raw) return false;
+    progress=JSON.parse(raw);
+    if(sourceKey===LEGACY_STORAGE_KEY && progress.version===1){
+      progress={
+        ...progress,
+        version:STORAGE_VERSION,
+        phase:"result",
+        sessionQuestionIds:[],
+        answers:[],
+        currentIndex:0
+      };
+    }
+  }catch(error){
+    console.warn("保存済みの学習進捗を読み込めませんでした。",error);
+    clearSavedProgress();
+    return false;
+  }
+
+  const questionById=new Map(QUESTIONS.map(q=>[q.id,q]));
+  const expectedIds=new Set(initialQuestionPool().map(q=>q.id));
+  const initialIds=Array.isArray(progress.initialQuestionIds)?progress.initialQuestionIds:[];
+  const masteredIds=Array.isArray(progress.masteredIds)?progress.masteredIds:[];
+  const wrongIds=Array.isArray(progress.lastWrongIds)?progress.lastWrongIds:[];
+  const sessionIds=Array.isArray(progress.sessionQuestionIds)?progress.sessionQuestionIds:[];
+  const storedAnswers=Array.isArray(progress.answers)?progress.answers:[];
+  const validIds=ids=>ids.every(id=>Number.isInteger(id)&&expectedIds.has(id)&&questionById.has(id));
+  const unique=ids=>ids.length===new Set(ids).size;
+  const baseValid=progress.version===STORAGE_VERSION
+    && (progress.phase==="result" || progress.phase==="in_progress")
+    && typeof progress.learnerName==="string" && progress.learnerName.trim()
+    && typeof progress.initialAttemptId==="string" && progress.initialAttemptId
+    && Number.isInteger(progress.roundNumber) && progress.roundNumber>=1
+    && initialIds.length===expectedIds.size && new Set(initialIds).size===expectedIds.size
+    && unique(masteredIds) && unique(wrongIds) && unique(sessionIds)
+    && validIds(initialIds) && validIds(masteredIds) && validIds(wrongIds) && validIds(sessionIds);
+  const resultPartition=new Set(masteredIds.concat(wrongIds));
+  const resultValid=progress.phase==="result"
+    && !masteredIds.some(id=>wrongIds.includes(id))
+    && resultPartition.size===expectedIds.size;
+  const activePartition=new Set(masteredIds.concat(sessionIds));
+  const answersValid=storedAnswers.length===sessionIds.length
+    && storedAnswers.every(answer=>answer===null || (Number.isInteger(answer)&&answer>=0&&answer<4));
+  const initialRoundValid=progress.roundNumber===1
+    && masteredIds.length===0 && wrongIds.length===0 && sessionIds.length===expectedIds.size;
+  const retryRoundValid=progress.roundNumber>1
+    && wrongIds.length===sessionIds.length
+    && wrongIds.every(id=>sessionIds.includes(id));
+  const activeValid=progress.phase==="in_progress"
+    && sessionIds.length>0
+    && Number.isInteger(progress.currentIndex)
+    && progress.currentIndex>=0 && progress.currentIndex<sessionIds.length
+    && answersValid
+    && !masteredIds.some(id=>sessionIds.includes(id))
+    && activePartition.size===expectedIds.size
+    && (initialRoundValid || retryRoundValid);
+  const isValid=baseValid && (resultValid || activeValid);
+
+  if(!isValid){
+    console.warn("保存済みの学習進捗が現在の問題構成と一致しないため削除しました。");
+    clearSavedProgress();
+    return false;
+  }
+
+  savedProgress=progress;
+  initialQuestions=initialIds.map(id=>questionById.get(id));
+  mastered=new Set(masteredIds);
+  lastWrong=wrongIds.map(id=>questionById.get(id));
+  roundNumber=progress.roundNumber;
+  initialCompletionSent=Boolean(progress.initialCompletionSent);
+  initialAttemptId=progress.initialAttemptId;
+  if(progress.phase==="in_progress"){
+    session=sessionIds.map(id=>{
+      const q=questionById.get(id);
+      return {q,opts:q.opts.slice(),ans:q.ans};
+    });
+    answers=storedAnswers.slice();
+    cur=progress.currentIndex;
+    el("tot").textContent=session.length;
+  }else{
+    session=[];
+    answers=[];
+    cur=0;
+  }
+  el("learnerName").value=progress.learnerName.trim();
+  if(sourceKey===LEGACY_STORAGE_KEY){
+    try{
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(progress));
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+    }catch(error){
+      console.warn("旧形式の学習進捗を移行できませんでした。",error);
+    }
+  }
+  renderSavedProgress();
+  return true;
+}
+
+function renderSavedProgress(){
+  const panel=el("resumePanel");
+  if(!savedProgress){
+    panel.hidden=true;
+    return;
+  }
+  panel.hidden=false;
+  if(savedProgress.phase==="in_progress"){
+    const answeredCount=savedProgress.answers.filter(answer=>answer!==null).length;
+    const questionNumber=savedProgress.currentIndex+1;
+    el("resumeSummary").textContent=
+      `${savedProgress.learnerName}さん：${savedProgress.sessionQuestionIds.length}問中${answeredCount}問回答済み。Q${questionNumber}から再開できます。`;
+    el("resumeBtn").textContent=`Q${questionNumber}から再開`;
+    el("resumeBtn").hidden=false;
+    updateResumeState();
+    return;
+  }
+  const remaining=savedProgress.lastWrongIds.length;
+  const masteredCount=savedProgress.masteredIds.length;
+  el("resumeSummary").textContent=remaining
+    ? `${savedProgress.learnerName}さん：50問中${masteredCount}問を習得済み。残り${remaining}問です。`
+    : `${savedProgress.learnerName}さん：全50問を習得済みです。`;
+  el("resumeBtn").hidden=remaining===0;
+  el("resumeBtn").textContent="前回の誤答から再開";
+  updateResumeState();
+}
+
+function updateResumeState(){
+  if(!savedProgress) return;
+  const sameName=el("learnerName").value.trim()===savedProgress.learnerName.trim();
+  const hint=el("resumeHint");
+  el("resumeBtn").disabled=!sameName;
+  hint.hidden=sameName;
+  hint.textContent=sameName?"":"受講者名が保存時と異なります。前回の名前に戻すか、履歴を消して最初から開始してください。";
+}
+
+function show(view){
+  el("start").classList.toggle("on", view==="start");
+  el("quiz").classList.toggle("on", view==="quiz");
+  el("result").classList.toggle("on", view==="result");
+  el("hdr").classList.toggle("on", view==="quiz");
+}
+
+function renderQuestion(){
+  const s = session[cur];
+  const page = syllabusPage(s.q.ref);
+  el("cur").textContent = cur+1;
+  el("fill").style.width = ((cur+1)/session.length*100)+"%";
+  el("prevBtn").disabled = cur===0;
+  const answered = answers[cur]!==null;
+  const nextBtn = el("nextBtn");
+  nextBtn.style.display = answered ? "inline-block" : "none";
+  nextBtn.textContent = cur<session.length-1 ? "次へ →" : "結果を見る →";
+
+  el("qcard").innerHTML =
+    `<div class="qmeta"><span class="qno">Q${pad(cur+1)}</span><span class="qtag">第${s.q.ch}章</span></div>
+     <p class="qtext">${s.q.q}</p>
+     <div class="qhint"><span class="label">ヒント</span><a href="${SYLLABUS_URL}#page=${page}" target="_blank" rel="noopener noreferrer">公式シラバス p.${page}（${s.q.ref}）を開く ↗</a></div>
+     <div class="opts">` +
+     s.opts.map((t,i)=>`<button type="button" class="opt${answers[cur]===i?" sel":""}" data-i="${i}">
+        <span class="key">${KEYS[i]}</span><span class="txt">${t}</span></button>`).join("") +
+     `</div>`;
+
+  el("qcard").querySelectorAll(".opt").forEach(btn=>{
+    btn.addEventListener("click",()=>select(+btn.dataset.i));
+  });
+}
+
+function select(i){
+  if(locking) return;
+  answers[cur]=i;
+  saveProgress("in_progress");
+  const card = el("qcard");
+  card.querySelectorAll(".opt").forEach(o=>o.classList.toggle("sel",+o.dataset.i===i));
+  locking=true;
+  const advance=()=>{
+    locking=false;
+    if(cur < session.length-1){
+      cur++;
+      saveProgress("in_progress");
+      renderQuestion();
+    }
+    else { finish(); }
+  };
+  reduceMotion ? advance() : setTimeout(advance, ADVANCE_MS);
+}
+
+el("prevBtn").addEventListener("click",()=>{
+  if(!locking && cur>0){
+    cur--;
+    saveProgress("in_progress");
+    renderQuestion();
+  }
+});
+el("nextBtn").addEventListener("click",()=>{
+  if(locking || answers[cur]===null) return;
+  if(cur<session.length-1){
+    cur++;
+    saveProgress("in_progress");
+    renderQuestion();
+  }else{
+    finish();
+  }
+});
+
+async function notifyInitialCompletion(correct){
+  const status = el("notifyStatus");
+  status.hidden = false;
+  if(!SLACK_NOTIFY_URL){
+    status.className = "notify warn";
+    status.textContent = "Slack通知は未設定です。SLACK_NOTIFY_URL に社内の通知中継URLを設定すると、初回完了時に自動通知されます。";
+    return;
+  }
+  status.className = "notify";
+  status.textContent = "Slackへ完了通知を送信しています…";
+  try{
+    await fetch(SLACK_NOTIFY_URL,{
+      method:"POST",
+      mode:"no-cors",
+      headers:{"Content-Type":"text/plain;charset=UTF-8"},
+      body:JSON.stringify({
+        source:"jstqb-drill",
+        event:"first_round_completed",
+        name:el("learnerName").value.trim(),
+        attemptId:initialAttemptId,
+        correct
+      })
+    });
+    status.className = "notify ok";
+    status.textContent = "Slackへの初回50問完了通知を受け付けました（通知先で受信状況を確認してください）。";
+  }catch(error){
+    status.className = "notify error";
+    status.textContent = "Slack通知を送信できませんでした。担当者へ連絡してください（"+error.message+"）。";
+  }
+}
+
+function finish(){
+  let correct=0; const wrongByRef={};
+  session.forEach((s,idx)=>{
+    if(answers[idx]===s.ans){ correct++; mastered.add(s.q.id); }
+    else {
+      mastered.delete(s.q.id);
+      (wrongByRef[s.q.ref]=wrongByRef[s.q.ref]||[]).push(s.q);
+    }
+  });
+  lastWrong = session.filter((s,idx)=>answers[idx]!==s.ans).map(s=>s.q);
+  const total=session.length;
+  const pct=Math.round(correct/total*100);
+  const masteryPct=Math.round(mastered.size/initialQuestions.length*100);
+  const pass = PASS_ALL ? (mastered.size===initialQuestions.length) : (masteryPct>=PASS_PCT);
+
+  const v=el("verdict");
+  v.textContent = pass ? "PASS ✓ 合格" : "FAIL ✕ 再挑戦";
+  v.className = "verdict "+(pass?"pass":"fail");
+  el("pct").textContent = pct+"%";
+  el("frac").textContent = "今回 "+correct+" / "+total+" 問正解";
+  el("rmsg").innerHTML = pass
+    ? `全50問を習得しました。<b>${roundNumber}回</b>の実施で第1章・第2章をクリアです。`
+    : `全50問中 <b>${mastered.size}問</b>を習得済みです。残り <b>${initialQuestions.length-mastered.size}問</b>を復習しましょう。`;
+
+  el("statusbar").innerHTML = session.map((s,idx)=>{
+    const ok=answers[idx]===s.ans;
+    return `<span class="cell ${ok?"ok":"ng"}" title="Q${pad(idx+1)}"></span>`;
+  }).join("");
+
+  const refs = Object.keys(wrongByRef).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const list = el("reviewlist");
+  if(refs.length===0){
+    list.innerHTML = `<div class="allclear">全問正解！ 復習が必要な項目はありません。</div>`;
+  } else {
+    list.innerHTML = refs.map(r=>{
+      const items = wrongByRef[r].map(q=>q.q.length>26?q.q.slice(0,26)+"…":q.q);
+      return `<div class="refrow"><span class="sec">${r}</span><span class="qs">${items.join(" ／ ")}</span></div>`;
+    }).join("");
+  }
+  const retryBtn=el("retryBtn");
+  retryBtn.textContent = pass ? "最初から50問に再挑戦" : `間違えた${lastWrong.length}問だけやり直す`;
+  let shouldNotify=false;
+  if(roundNumber===1 && !initialCompletionSent){
+    initialCompletionSent=true;
+    shouldNotify=true;
+  }
+  saveProgress("result");
+  if(shouldNotify) notifyInitialCompletion(correct);
+  show("result");
+  window.scrollTo({top:0,behavior:reduceMotion?"auto":"smooth"});
+}
+
+function beginRound(){ renderQuestion(); show("quiz"); window.scrollTo({top:0}); }
+function updateStartState(){
+  el("startBtn").disabled = !el("learnerName").value.trim() || !el("readSyllabus").checked;
+  updateResumeState();
+}
+el("learnerName").addEventListener("input",updateStartState);
+el("readSyllabus").addEventListener("change",updateStartState);
+el("startBtn").addEventListener("click",()=>{
+  if(savedProgress && !window.confirm("保存済みの学習履歴を削除し、最初の50問から開始しますか？")) return;
+  clearSavedProgress();
+  buildInitialSession();
+  saveProgress("in_progress");
+  beginRound();
+});
+el("resumeBtn").addEventListener("click",()=>{
+  if(!savedProgress || el("resumeBtn").disabled || !restoreProgress()) return;
+  if(savedProgress.phase==="result"){
+    makeRound(lastWrong);
+    saveProgress("in_progress");
+  }
+  beginRound();
+});
+el("clearProgressBtn").addEventListener("click",()=>{
+  if(!window.confirm("このブラウザに保存された受講者名と学習履歴を削除しますか？")) return;
+  clearSavedProgress();
+  initialQuestions=[];
+  mastered=new Set();
+  lastWrong=[];
+  roundNumber=0;
+  initialCompletionSent=false;
+  initialAttemptId="";
+  el("learnerName").value="";
+  el("readSyllabus").checked=false;
+  updateStartState();
+});
+el("retryBtn").addEventListener("click",()=>{
+  if(lastWrong.length===0){
+    clearSavedProgress();
+    buildInitialSession();
+  }
+  else makeRound(lastWrong);
+  saveProgress("in_progress");
+  beginRound();
+});
+
+restoreProgress();
+updateStartState();
+show("start");
+</script>
 </body>
 </html>
