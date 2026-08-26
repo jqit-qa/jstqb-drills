@@ -187,7 +187,7 @@ const PASS_PCT = 80;   // PASS_ALL=false のときの合格ライン(%)
 const ADVANCE_MS = 320;// 選択してから次問へ進むまでの待ち時間(ms)
 // Slackへ直接送らず、認証情報を保持する社内の通知中継URLを指定してください。
 // 空文字のままなら通知を送らず、ドリルは通常どおり続行します。
-const SLACK_NOTIFY_URL = "";
+const SLACK_NOTIFY_URL = "https://script.google.com/macros/s/AKfycbygAfjSXMDKffFoNqGw2AsGSTtw8thyIPcbm3AdxaZE4aGuikqflrrCPYrJxQ818n_K/exec";
 const SYLLABUS_VERSION = "JSTQB Foundation Level Version 2023V4.0.J02";
 const SYLLABUS_URL = "https://jstqb.jp/dl/JSTQB-SyllabusFoundation_VersionV40.J02.pdf";
 /* ============================================== */
@@ -263,7 +263,7 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").match
 
 const el = id => document.getElementById(id);
 let session=[], answers=[], initialQuestions=[], lastWrong=[];
-let cur=0, locking=false, roundNumber=0, initialCompletionSent=false;
+let cur=0, locking=false, roundNumber=0, initialCompletionSent=false, initialAttemptId="";
 let mastered = new Set();
 
 function pad(n){return String(n).padStart(2,"0");}
@@ -292,6 +292,8 @@ function buildInitialSession(){
   mastered = new Set();
   roundNumber = 0;
   initialCompletionSent = false;
+  initialAttemptId = window.crypto?.randomUUID?.()
+    || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   lastWrong = [];
   el("notifyStatus").hidden = true;
   makeRound(initialQuestions);
@@ -345,7 +347,7 @@ function select(i){
 el("prevBtn").addEventListener("click",()=>{ if(!locking && cur>0){cur--;renderQuestion();} });
 el("nextBtn").addEventListener("click",()=>{ if(!locking && cur<session.length-1){cur++;renderQuestion();} });
 
-async function notifyInitialCompletion(correct,total){
+async function notifyInitialCompletion(correct){
   const status = el("notifyStatus");
   status.hidden = false;
   if(!SLACK_NOTIFY_URL){
@@ -361,15 +363,15 @@ async function notifyInitialCompletion(correct,total){
       mode:"no-cors",
       headers:{"Content-Type":"text/plain;charset=UTF-8"},
       body:JSON.stringify({
-        event:"jstqb_fl_ch1_2_initial_complete",
-        learnerName:el("learnerName").value.trim(),
-        completedAt:new Date().toISOString(),
-        syllabusVersion:SYLLABUS_VERSION,
-        correct,total,wrong:total-correct
+        source:"jstqb-drill",
+        event:"first_round_completed",
+        name:el("learnerName").value.trim(),
+        attemptId:initialAttemptId,
+        correct
       })
     });
     status.className = "notify ok";
-    status.textContent = "Slackへ初回50問の完了通知を送信しました（通知先で受信状況を確認してください）。";
+    status.textContent = "Slackへの初回50問完了通知を受け付けました（通知先で受信状況を確認してください）。";
   }catch(error){
     status.className = "notify error";
     status.textContent = "Slack通知を送信できませんでした。担当者へ連絡してください（"+error.message+"）。";
@@ -419,7 +421,7 @@ function finish(){
   retryBtn.textContent = pass ? "最初から50問に再挑戦" : `間違えた${lastWrong.length}問だけやり直す`;
   if(roundNumber===1 && !initialCompletionSent){
     initialCompletionSent=true;
-    notifyInitialCompletion(correct,total);
+    notifyInitialCompletion(correct);
   }
   show("result");
   window.scrollTo({top:0,behavior:reduceMotion?"auto":"smooth"});
