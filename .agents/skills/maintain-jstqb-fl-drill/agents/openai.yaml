@@ -1,0 +1,4 @@
+interface:
+  display_name: "JSTQB FLドリル更新"
+  short_description: "シラバス改訂時の問題・解答・参照ページを安全に同期更新"
+  default_prompt: "$maintain-jstqb-fl-drill を使って、最新の公式シラバスとの差分を確認しドリルを更新してください。"
