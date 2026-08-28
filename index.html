@@ -42,6 +42,18 @@
   .rules .ic{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;color:var(--accent);background:var(--accent-tint);border-radius:8px;width:26px;height:26px;flex:none;display:grid;place-items:center;font-size:13px}
   .browser-note{border:1px solid #ead79b;border-radius:12px;background:#fff8df;color:#695514;padding:12px 14px;margin:0 0 20px;font-size:13px}
   .browser-note strong{display:block;color:#4f400f;margin-bottom:2px}
+  .faq{border:1px solid var(--line);border-radius:12px;background:#fafbff;margin:0 0 20px;overflow:hidden}
+  .faq summary{display:flex;align-items:center;gap:8px;min-height:48px;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:700;list-style:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::before{content:"＋";color:var(--accent);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .faq[open] summary::before{content:"−"}
+  .faq summary:hover{background:#f4f6fd}
+  .faq summary:active{background:#eef1fb}
+  .faq[open] summary{border-bottom:1px solid var(--line)}
+  .faq-body{padding:4px 14px 14px}
+  .faq-body dl{margin:0}
+  .faq-body dt{font-size:13.5px;font-weight:700;margin-top:12px}
+  .faq-body dd{font-size:13px;color:var(--muted);margin:3px 0 0}
   .prep{border:1px solid var(--line);border-radius:12px;background:#fafbff;padding:16px;margin:0 0 20px}
   .prep label{display:block;font-size:14px;font-weight:600;margin-bottom:8px}
   .prep input[type="text"]{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font:inherit;margin-bottom:12px}
@@ -168,6 +180,29 @@
       <li><span class="ic">✓</span><span>誤答だけをやり直し、<b>全50問正解</b>になるまで繰り返します。</span></li>
     </ul>
     <p class="browser-note"><strong>ご利用上の注意</strong>必ずSafari／Chromeなどの標準ブラウザで開いてください。Slackやメールなどのアプリ内ブラウザでは保存領域が別になり、途中離脱後に結果を再開できない可能性があります。</p>
+    <details class="faq">
+      <summary>保存・再開について（よくある質問）</summary>
+      <div class="faq-body">
+        <dl>
+          <dt>Q. 学習履歴はいつまで残りますか？</dt>
+          <dd>アプリ側で保存期限は設定していません。同じ端末・標準ブラウザ・公開URLであれば、ページを閉じたり再読み込みしたりしても再開できます。ただし、ブラウザのプライバシー保護や容量管理による削除もあるため、永久保存は保証されません。</dd>
+          <dt>Q. Safariの履歴やキャッシュを消すとどうなりますか？</dt>
+          <dd>「履歴とWebサイトデータを消去」または「全Webサイトデータを削除」を実行すると、このドリルの進捗も削除され、復元できません。キャッシュだけを削除する操作では通常残りますが、削除対象にWebサイトデータが含まれていないか確認してください。</dd>
+          <dt>Q. プライベートブラウズでも保存できますか？</dt>
+          <dd>利用中は保存されますが、プライベートタブ／ウィンドウを閉じると削除されます。通常のSafari／Chromeで利用してください。</dd>
+          <dt>Q. 別の端末やブラウザから続けられますか？</dt>
+          <dd>続けられません。SafariとChrome、標準ブラウザとSlackなどのアプリ内ブラウザは、それぞれ別の保存領域です。</dd>
+          <dt>Q. 同じ端末を複数人で使えますか？</dt>
+          <dd>保存できるのは最新の受講者1人分です。別の人が始める場合は「履歴を消して最初から」を選び、前の人の履歴を削除してください。</dd>
+          <dt>Q. 過去の回答がすべて記録されますか？</dt>
+          <dd>過去の全回答ログではなく、再開に必要な最新状態だけを保存します。初回50問の完了通知はSlackへ送られますが、Slack通知から進捗を復元することはできません。</dd>
+          <dt>Q. 全問正解した後も履歴は残りますか？</dt>
+          <dd>「全50問を習得済み」という最新状態が残ります。「最初から50問に再挑戦」を選ぶと、その履歴を新しい挑戦の状態に置き換えます。</dd>
+          <dt>Q. ドリルが更新された場合も再開できますか？</dt>
+          <dd>説明文などの更新では通常そのまま再開できます。問題や正答が変わり、以前の進捗と互換性がなくなった場合は、安全のため保存履歴を自動で削除し、最初の50問から開始します。</dd>
+        </dl>
+      </div>
+    </details>
     <div class="resume-panel" id="resumePanel" hidden>
       <strong>前回の学習履歴があります</strong>
       <p id="resumeSummary"></p>

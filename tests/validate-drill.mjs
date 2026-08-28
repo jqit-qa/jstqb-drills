@@ -139,6 +139,15 @@ assert.match(html, /main\{[^}]*env\(safe-area-inset-bottom, 0px\)/);
 assert.match(html, /button\.nav-btn\{[^}]*padding:14px 20px;[^}]*min-height:44px/);
 assert.match(html, /\.opt:not\(:disabled\):active,[\s\S]*\.btn-primary:not\(:disabled\):active/);
 assert.ok(html.includes('Slackやメールなどのアプリ内ブラウザでは保存領域が別になり'));
+assert.ok(html.includes('保存・再開について（よくある質問）'));
+assert.ok(html.includes('永久保存は保証されません'));
+assert.ok(html.includes('履歴とWebサイトデータを消去'));
+assert.ok(html.includes('プライベートタブ／ウィンドウを閉じると削除されます'));
+assert.ok(html.includes('保存できるのは最新の受講者1人分です'));
+assert.ok(html.includes('過去の全回答ログではなく、再開に必要な最新状態だけを保存します'));
+assert.ok(html.includes('「全50問を習得済み」という最新状態が残ります'));
+assert.ok(html.includes('安全のため保存履歴を自動で削除し、最初の50問から開始します'));
+assert.match(html, /\.faq summary\{[^}]*min-height:48px[^}]*touch-action:manipulation/);
 assert.match(html, /\.opt\.sel::after\{content:"✓"/);
 assert.match(
   html,
@@ -527,4 +536,4 @@ assert.ok(
   '拒否理由を異常投稿の検知ログとして記録すること'
 );
 
-console.log('PASS: 問題整合・進捗復元・モバイル操作・Slack入力無害化・重複／レート抑止');
+console.log('PASS: 問題整合・進捗復元・保存FAQ・モバイル操作・Slack入力無害化・重複／レート抑止');
