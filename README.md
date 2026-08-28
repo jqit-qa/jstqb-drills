@@ -24,6 +24,8 @@ Safari／Chromeなどの標準ブラウザで利用してください。Slackや
 
 準拠シラバスは `JSTQB Foundation Level Version 2023V4.0.J02` です。
 
+シラバス改訂時の差分確認と問題更新には、リポジトリ内の `maintain-jstqb-fl-drill` スキルを使用します。Codexでは `$maintain-jstqb-fl-drill`、Claude Codeでは `/maintain-jstqb-fl-drill` で明示的に呼び出せます。更新手順の正本は `.agents/skills/maintain-jstqb-fl-drill/` にあり、Claude Code用の入口は `.claude/skills/maintain-jstqb-fl-drill/` にあります。
+
 シラバス改訂時は、問題文、正答、節番号、ページ番号、解説を再確認してください。問題を変更するときは、問題バンクMarkdown、本番HTML内の `QUESTIONS` 配列、`SYLLABUS_PAGES` を必ず同時に更新します。
 
 正答位置は固定表示でも推測されにくいよう、A〜Dを各12〜13問に保ちます。問題IDや保存対象の構成を変更して既存進捗と互換性がなくなる場合は、HTMLの `STORAGE_VERSION` と `STORAGE_KEY` を更新してください。
