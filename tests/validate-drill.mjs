@@ -6,11 +6,26 @@ const html = fs.readFileSync('index.html', 'utf8');
 const legacyHtml = fs.readFileSync('JSTQB_FL_1-2章_確認ドリル.html', 'utf8');
 const markdown = fs.readFileSync('JSTQB_FL_1-2章_4択問題バンク.md', 'utf8');
 const gas = fs.readFileSync('gas/Code.gs', 'utf8');
+const sharedSkill = fs.readFileSync(
+  '.agents/skills/maintain-jstqb-fl-drill/SKILL.md',
+  'utf8'
+);
+const claudeSkill = fs.readFileSync(
+  '.claude/skills/maintain-jstqb-fl-drill/SKILL.md',
+  'utf8'
+);
 const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
 const STORAGE_KEY = 'jstqb-fl-ch1-2-progress-v2';
 const LEGACY_STORAGE_KEY = 'jstqb-fl-ch1-2-progress-v1';
 
 assert.ok(script, 'HTML内のscriptを取得できること');
+assert.match(sharedSkill, /^---\nname: maintain-jstqb-fl-drill\n/);
+assert.match(claudeSkill, /^---\nname: maintain-jstqb-fl-drill\n/);
+assert.match(
+  claudeSkill,
+  /\.\.\/\.\.\/\.\.\/\.agents\/skills\/maintain-jstqb-fl-drill\/SKILL\.md/,
+  'Claude Code用スキルが共通手順の正本を参照すること'
+);
 assert.match(legacyHtml, /http-equiv="refresh" content="0; url=\.\/"/);
 assert.match(legacyHtml, /rel="canonical" href="https:\/\/jqit-qa\.github\.io\/jstqb-drills\/"/);
 new Function(script);
