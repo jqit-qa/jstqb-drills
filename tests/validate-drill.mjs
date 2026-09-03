@@ -536,4 +536,33 @@ assert.ok(
   '拒否理由を異常投稿の検知ログとして記録すること'
 );
 
+const dtContext = {
+  console: {warn() {}},
+  JSON,
+  Number,
+  String,
+  Date,
+  Math,
+  PropertiesService: {
+    getScriptProperties: () => ({
+      getProperty: key => key === 'SLACK_WEBHOOK_URL' ? 'https://hooks.slack.test/example' : null,
+      setProperty() {}
+    })
+  },
+  CacheService: {getScriptCache: () => ({get: () => null, put() {}})},
+  LockService: {getScriptLock: () => ({waitLock() {}, releaseLock() {}})},
+  Utilities: {formatDate: () => '2026/09/03 15:00'},
+  Session: {getScriptTimeZone: () => 'Asia/Tokyo'},
+  UrlFetchApp: {fetch: (url, options) => { sent.push({url, options}); return {getResponseCode: () => 200, getContentText: () => 'ok'};}},
+  ContentService: {MimeType: {JSON: 'json'}, createTextOutput: text => ({text, setMimeType() { return this; }})}
+};
+vm.createContext(dtContext);
+vm.runInContext(gas + '\nthis.handlePost = doPost;', dtContext);
+const dtResponse = dtContext.handlePost({postData: {contents: JSON.stringify({
+  source: 'decision-table-assignment', event: 'production_quiz_completed', name: 'DT受講者', attemptId: 'decision-table-test-0001', correct: 4
+})}});
+assert.equal(JSON.parse(dtResponse.text).ok, true, 'DTの全問正解通知を受理すること');
+const dtMessage = JSON.parse(sent.at(-1).options.payload);
+assert.equal(dtMessage.blocks[0].text.text, 'デシジョンテーブル技法課題 完了通知', 'DT専用の通知見出しを送ること');
+
 console.log('PASS: 問題整合・進捗復元・保存FAQ・モバイル操作・Slack入力無害化・重複／レート抑止');

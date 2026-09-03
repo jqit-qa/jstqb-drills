@@ -7,8 +7,30 @@
  */
 
 const WEBHOOK_PROPERTY = 'SLACK_WEBHOOK_URL';
-const EXPECTED_SOURCE = 'jstqb-drill';
-const TOTAL_QUESTIONS = 50;
+const NOTIFICATION_EVENTS = {
+  'jstqb-drill:first_round_completed': {
+    total: 50,
+    title: 'JSTQBドリル 完了通知',
+    text: 'JSTQBドリルの初回50問が完了しました',
+    scoreLabel: '初回結果',
+    detail: function(correct) {
+      const incorrect = 50 - correct;
+      return incorrect === 0
+        ? '全問正解です。'
+        : 'この後、間違えた問題のみ再実施します。';
+    }
+  },
+  'decision-table-assignment:production_quiz_completed': {
+    total: 4,
+    title: 'デシジョンテーブル技法課題 完了通知',
+    text: 'デシジョンテーブル技法課題の本番問題・理解度チェックが完了しました',
+    scoreLabel: '理解度チェック',
+    detail: function() {
+      return '本番問題の理解度チェックに全問正解しました。';
+    },
+    requireFullScore: true
+  }
+};
 const MAX_REQUEST_CHARS = 2048;
 const ATTEMPT_CACHE_SECONDS = 21600;
 const RATE_WINDOW_PROPERTY = 'rate:window';
@@ -33,10 +55,9 @@ function doPost(e) {
 
     const data = JSON.parse(raw);
 
-    if (
-      data.source !== EXPECTED_SOURCE ||
-      data.event !== 'first_round_completed'
-    ) {
+    const notification = getNotificationEvent_(data.source, data.event);
+
+    if (!notification) {
       throw new Error('Invalid request');
     }
 
@@ -55,7 +76,8 @@ function doPost(e) {
     if (
       !Number.isInteger(correct) ||
       correct < 0 ||
-      correct > TOTAL_QUESTIONS
+      correct > notification.total ||
+      (notification.requireFullScore && correct !== notification.total)
     ) {
       throw new Error('Invalid score');
     }
@@ -67,7 +89,7 @@ function doPost(e) {
       });
     }
 
-    sendToSlack_(name, correct);
+    sendToSlack_(name, correct, notification);
 
     return createResponse_({ok: true});
   } catch (error) {
@@ -144,7 +166,12 @@ function reserveNotification_(attemptId) {
   }
 }
 
-function sendToSlack_(name, correct) {
+function getNotificationEvent_(source, event) {
+  if (typeof source !== 'string' || typeof event !== 'string') return null;
+  return NOTIFICATION_EVENTS[source + ':' + event] || null;
+}
+
+function sendToSlack_(name, correct, notification) {
   const webhookUrl =
     PropertiesService.getScriptProperties().getProperty(WEBHOOK_PROPERTY);
 
@@ -152,7 +179,6 @@ function sendToSlack_(name, correct) {
     throw new Error('SLACK_WEBHOOK_URL is not configured');
   }
 
-  const incorrect = TOTAL_QUESTIONS - correct;
   const completedAt = Utilities.formatDate(
     new Date(),
     'Asia/Tokyo',
@@ -160,13 +186,13 @@ function sendToSlack_(name, correct) {
   );
 
   const message = {
-    text: 'JSTQBドリルの初回50問が完了しました',
+    text: notification.text,
     blocks: [
       {
         type: 'header',
         text: {
           type: 'plain_text',
-          text: 'JSTQBドリル 完了通知'
+          text: notification.title
         }
       },
       {
@@ -178,11 +204,7 @@ function sendToSlack_(name, correct) {
           },
           {
             type: 'plain_text',
-            text: '初回結果\n' + correct + '/50問正解'
-          },
-          {
-            type: 'plain_text',
-            text: '間違い\n' + incorrect + '問'
+            text: notification.scoreLabel + '\n' + correct + '/' + notification.total + '問正解'
           },
           {
             type: 'plain_text',
@@ -195,9 +217,7 @@ function sendToSlack_(name, correct) {
         elements: [
           {
             type: 'plain_text',
-            text: incorrect === 0
-              ? '全問正解です。'
-              : 'この後、間違えた問題のみ再実施します。'
+            text: notification.detail(correct)
           }
         ]
       },
