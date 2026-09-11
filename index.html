@@ -694,7 +694,7 @@ function finish(){
   el("pct").textContent = pct+"%";
   el("frac").textContent = "今回 "+correct+" / "+total+" 問正解";
   el("rmsg").innerHTML = pass
-    ? `全50問を習得しました。<b>${roundNumber}回</b>の実施で第1章・第2章をクリアです。`
+    ? `全問正解おめでとうございます！ <b>${roundNumber}回</b>の実施で第1章・第2章をクリアしました。<br>次の設計課題が展開されるまで、1週間ほどお待ちください。`
     : `全50問中 <b>${mastered.size}問</b>を習得済みです。残り <b>${initialQuestions.length-mastered.size}問</b>を復習しましょう。`;
 
   el("statusbar").innerHTML = session.map((s,idx)=>{

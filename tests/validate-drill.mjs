@@ -157,6 +157,8 @@ assert.doesNotMatch(html, /user-scalable\s*=\s*no/i);
 assert.doesNotMatch(html, /maximum-scale\s*=\s*1(?:\.0)?/i);
 assert.ok(html.includes('リーダー宛に完了通知</b>が送られます'));
 assert.ok(!html.includes('設定済みの場合は<b>Slackへ完了通知'));
+assert.ok(html.includes('全問正解おめでとうございます！'));
+assert.ok(html.includes('次の設計課題が展開されるまで、1週間ほどお待ちください。'));
 
 class MockElement {
   constructor() {
