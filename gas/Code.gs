@@ -10,7 +10,7 @@ const WEBHOOK_PROPERTY = 'SLACK_WEBHOOK_URL';
 const EXPECTED_SOURCE = 'jstqb-drill';
 const TOTAL_QUESTIONS = 50;
 const MAX_REQUEST_CHARS = 2048;
-const ATTEMPT_CACHE_SECONDS = 21600;
+const ROUND_CACHE_SECONDS = 21600;
 const RATE_WINDOW_PROPERTY = 'rate:window';
 const RATE_WINDOW_SECONDS = 300;
 const RATE_WINDOW_LIMIT = 10;
@@ -33,10 +33,7 @@ function doPost(e) {
 
     const data = JSON.parse(raw);
 
-    if (
-      data.source !== EXPECTED_SOURCE ||
-      data.event !== 'first_round_completed'
-    ) {
+    if (data.source !== EXPECTED_SOURCE) {
       throw new Error('Invalid request');
     }
 
@@ -46,28 +43,20 @@ function doPost(e) {
 
     const name = sanitizeName_(data.name);
     const attemptId = sanitizeAttemptId_(data.attemptId);
-    const correct = data.correct;
+    const completion = normalizeCompletion_(data);
 
     if (!name || !attemptId) {
       throw new Error('Required fields are missing');
     }
 
-    if (
-      !Number.isInteger(correct) ||
-      correct < 0 ||
-      correct > TOTAL_QUESTIONS
-    ) {
-      throw new Error('Invalid score');
-    }
-
-    if (!reserveNotification_(attemptId)) {
+    if (!reserveNotification_(attemptId, completion.roundNumber)) {
       return createResponse_({
         ok: true,
         duplicate: true
       });
     }
 
-    sendToSlack_(name, correct);
+    sendToSlack_(name, completion);
 
     return createResponse_({ok: true});
   } catch (error) {
@@ -83,13 +72,76 @@ function doPost(e) {
   }
 }
 
-function reserveNotification_(attemptId) {
+function normalizeCompletion_(data) {
+  // 公開HTMLの切り替え中も旧形式の初回通知を受け付ける。
+  if (data.event === 'first_round_completed') {
+    if (
+      !Number.isInteger(data.correct) ||
+      data.correct < 0 ||
+      data.correct > TOTAL_QUESTIONS
+    ) {
+      throw new Error('Invalid score');
+    }
+
+    return {
+      roundNumber: 1,
+      roundTotal: TOTAL_QUESTIONS,
+      correct: data.correct,
+      masteredCount: data.correct,
+      allMastered: data.correct === TOTAL_QUESTIONS
+    };
+  }
+
+  if (data.event !== 'round_completed') {
+    throw new Error('Invalid request');
+  }
+
+  const completion = {
+    roundNumber: data.roundNumber,
+    roundTotal: data.roundTotal,
+    correct: data.correct,
+    masteredCount: data.masteredCount,
+    allMastered: data.allMastered
+  };
+  const integerFields = [
+    completion.roundNumber,
+    completion.roundTotal,
+    completion.correct,
+    completion.masteredCount,
+    data.total
+  ];
+
+  if (
+    !integerFields.every(Number.isInteger) ||
+    completion.roundNumber < 1 ||
+    completion.roundNumber > 100 ||
+    completion.roundTotal < 1 ||
+    completion.roundTotal > TOTAL_QUESTIONS ||
+    completion.correct < 0 ||
+    completion.correct > completion.roundTotal ||
+    completion.masteredCount < completion.correct ||
+    completion.masteredCount > TOTAL_QUESTIONS ||
+    data.total !== TOTAL_QUESTIONS ||
+    typeof completion.allMastered !== 'boolean' ||
+    completion.allMastered !== (completion.masteredCount === TOTAL_QUESTIONS) ||
+    (completion.roundNumber === 1 && (
+      completion.roundTotal !== TOTAL_QUESTIONS ||
+      completion.masteredCount !== completion.correct
+    ))
+  ) {
+    throw new Error('Invalid completion data');
+  }
+
+  return completion;
+}
+
+function reserveNotification_(attemptId, roundNumber) {
   const lock = LockService.getScriptLock();
   lock.waitLock(5000);
 
   try {
     const cache = CacheService.getScriptCache();
-    const duplicateKey = 'attempt:' + attemptId;
+    const duplicateKey = 'round:' + attemptId + ':' + roundNumber;
 
     if (cache.get(duplicateKey)) {
       return false;
@@ -136,7 +188,7 @@ function reserveNotification_(attemptId) {
       startedAt: rateState.startedAt,
       count: rateState.count + 1
     }));
-    cache.put(duplicateKey, '1', ATTEMPT_CACHE_SECONDS);
+    cache.put(duplicateKey, '1', ROUND_CACHE_SECONDS);
 
     return true;
   } finally {
@@ -144,7 +196,7 @@ function reserveNotification_(attemptId) {
   }
 }
 
-function sendToSlack_(name, correct) {
+function sendToSlack_(name, completion) {
   const webhookUrl =
     PropertiesService.getScriptProperties().getProperty(WEBHOOK_PROPERTY);
 
@@ -152,7 +204,11 @@ function sendToSlack_(name, correct) {
     throw new Error('SLACK_WEBHOOK_URL is not configured');
   }
 
-  const incorrect = TOTAL_QUESTIONS - correct;
+  const incorrect = completion.roundTotal - completion.correct;
+  const remaining = TOTAL_QUESTIONS - completion.masteredCount;
+  const roundLabel = completion.roundNumber === 1
+    ? '初回50問'
+    : '誤答やり直し ' + (completion.roundNumber - 1) + '回目';
   const completedAt = Utilities.formatDate(
     new Date(),
     'Asia/Tokyo',
@@ -160,13 +216,17 @@ function sendToSlack_(name, correct) {
   );
 
   const message = {
-    text: 'JSTQBドリルの初回50問が完了しました',
+    text: completion.allMastered
+      ? '<!channel> JSTQBドリルが全問正解で完了しました。設計課題の展開をお願いします！'
+      : 'JSTQBドリルの' + roundLabel + 'が完了しました',
     blocks: [
       {
         type: 'header',
         text: {
           type: 'plain_text',
-          text: 'JSTQBドリル 完了通知'
+          text: completion.allMastered
+            ? 'JSTQBドリル 全問習得通知'
+            : 'JSTQBドリル ラウンド完了通知'
         }
       },
       {
@@ -178,11 +238,23 @@ function sendToSlack_(name, correct) {
           },
           {
             type: 'plain_text',
-            text: '初回結果\n' + correct + '/50問正解'
+            text: '実施ラウンド\n' + roundLabel
           },
           {
             type: 'plain_text',
-            text: '間違い\n' + incorrect + '問'
+            text: '今回の結果\n' + completion.correct + '/' + completion.roundTotal + '問正解'
+          },
+          {
+            type: 'plain_text',
+            text: '累計習得\n' + completion.masteredCount + '/50問'
+          },
+          {
+            type: 'plain_text',
+            text: '残り\n' + remaining + '問'
+          },
+          {
+            type: 'plain_text',
+            text: '今回の間違い\n' + incorrect + '問'
           },
           {
             type: 'plain_text',
@@ -195,12 +267,26 @@ function sendToSlack_(name, correct) {
         elements: [
           {
             type: 'plain_text',
-            text: incorrect === 0
-              ? '全問正解です。'
+            text: completion.allMastered
+              ? '全50問を習得しました。'
               : 'この後、間違えた問題のみ再実施します。'
           }
         ]
-      },
+      }
+    ]
+  };
+
+  if (completion.allMastered) {
+    message.blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: '<!channel>\n*JSTQBドリルが完了しましたので、設計課題の展開をお願いします！*'
+      }
+    });
+  }
+
+  message.blocks.push(
       {
         type: 'context',
         elements: [
@@ -210,8 +296,7 @@ function sendToSlack_(name, correct) {
           }
         ]
       }
-    ]
-  };
+  );
 
   const response = UrlFetchApp.fetch(webhookUrl, {
     method: 'post',
