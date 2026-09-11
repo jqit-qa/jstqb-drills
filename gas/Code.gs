@@ -19,16 +19,6 @@ const NOTIFICATION_EVENTS = {
         ? '全問正解です。'
         : 'この後、間違えた問題のみ再実施します。';
     }
-  },
-  'decision-table-assignment:production_quiz_completed': {
-    total: 4,
-    title: 'デシジョンテーブル技法課題 完了通知',
-    text: 'デシジョンテーブル技法課題の本番問題・理解度チェックが完了しました',
-    scoreLabel: '理解度チェック',
-    detail: function() {
-      return '本番問題の理解度チェックに全問正解しました。';
-    },
-    requireFullScore: true
   }
 };
 const MAX_REQUEST_CHARS = 2048;
