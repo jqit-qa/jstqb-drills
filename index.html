@@ -176,7 +176,7 @@
     <ul class="rules">
       <li><span class="ic">1</span><span>最初に公式シラバスの<b>第1章・第2章を読んで</b>ください。ドリル中も参照できます。</span></li>
       <li><span class="ic">2</span><span>全50問を<b>シラバスのページ・節番号順</b>に出題します。選択肢はAからDの固定順です。</span></li>
-      <li><span class="ic">3</span><span>初回の50問を最後まで終えると、<b>リーダー宛に完了通知</b>が送られます。</span></li>
+      <li><span class="ic">3</span><span>各ラウンドを最後まで終えるたびに、<b>リーダー宛に完了通知</b>が送られます。全50問を習得すると、設計課題の展開依頼も通知されます。</span></li>
       <li><span class="ic">✓</span><span>誤答だけをやり直し、<b>全50問正解</b>になるまで繰り返します。</span></li>
     </ul>
     <p class="browser-note"><strong>ご利用上の注意</strong>必ずSafari／Chromeなどの標準ブラウザで開いてください。Slackやメールなどのアプリ内ブラウザでは保存領域が別になり、途中離脱後に結果を再開できない可能性があります。</p>
@@ -195,7 +195,7 @@
           <dt>Q. 同じ端末を複数人で使えますか？</dt>
           <dd>保存できるのは最新の受講者1人分です。別の人が始める場合は「履歴を消して最初から」を選び、前の人の履歴を削除してください。</dd>
           <dt>Q. 過去の回答がすべて記録されますか？</dt>
-          <dd>過去の全回答ログではなく、再開に必要な最新状態だけを保存します。初回50問の完了通知はSlackへ送られますが、Slack通知から進捗を復元することはできません。</dd>
+          <dd>過去の全回答ログではなく、再開に必要な最新状態だけを保存します。各ラウンドの完了通知はSlackへ送られますが、Slack通知から進捗を復元することはできません。</dd>
           <dt>Q. 全問正解した後も履歴は残りますか？</dt>
           <dd>「全50問を習得済み」という最新状態が残ります。「最初から50問に再挑戦」を選ぶと、その履歴を新しい挑戦の状態に置き換えます。</dd>
           <dt>Q. ドリルが更新された場合も再開できますか？</dt>
@@ -339,7 +339,7 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").match
 
 const el = id => document.getElementById(id);
 let session=[], answers=[], initialQuestions=[], lastWrong=[];
-let cur=0, locking=false, roundNumber=0, initialCompletionSent=false, initialAttemptId="";
+let cur=0, locking=false, roundNumber=0, initialCompletionSent=false, lastNotifiedRound=0, initialAttemptId="";
 let mastered = new Set();
 let savedProgress = null;
 
@@ -373,6 +373,7 @@ function buildInitialSession(){
   mastered = new Set();
   roundNumber = 0;
   initialCompletionSent = false;
+  lastNotifiedRound = 0;
   initialAttemptId = window.crypto?.randomUUID?.()
     || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   lastWrong = [];
@@ -395,6 +396,7 @@ function saveProgress(phase="result"){
     currentIndex:inProgress?cur:0,
     roundNumber,
     initialCompletionSent,
+    lastNotifiedRound,
     initialAttemptId,
     savedAt:new Date().toISOString()
   };
@@ -438,6 +440,9 @@ function restoreProgress(){
         currentIndex:0
       };
     }
+    if(!Number.isInteger(progress.lastNotifiedRound)){
+      progress.lastNotifiedRound=progress.initialCompletionSent?1:0;
+    }
   }catch(error){
     console.warn("保存済みの学習進捗を読み込めませんでした。",error);
     clearSavedProgress();
@@ -458,6 +463,8 @@ function restoreProgress(){
     && typeof progress.learnerName==="string" && progress.learnerName.trim()
     && typeof progress.initialAttemptId==="string" && progress.initialAttemptId
     && Number.isInteger(progress.roundNumber) && progress.roundNumber>=1
+    && Number.isInteger(progress.lastNotifiedRound)
+    && progress.lastNotifiedRound>=0 && progress.lastNotifiedRound<=progress.roundNumber
     && initialIds.length===expectedIds.size && new Set(initialIds).size===expectedIds.size
     && unique(masteredIds) && unique(wrongIds) && unique(sessionIds)
     && validIds(initialIds) && validIds(masteredIds) && validIds(wrongIds) && validIds(sessionIds);
@@ -495,6 +502,7 @@ function restoreProgress(){
   lastWrong=wrongIds.map(id=>questionById.get(id));
   roundNumber=progress.roundNumber;
   initialCompletionSent=Boolean(progress.initialCompletionSent);
+  lastNotifiedRound=progress.lastNotifiedRound;
   initialAttemptId=progress.initialAttemptId;
   if(progress.phase==="in_progress"){
     session=sessionIds.map(id=>{
@@ -627,12 +635,12 @@ el("nextBtn").addEventListener("click",()=>{
   }
 });
 
-async function notifyInitialCompletion(correct){
+async function notifyRoundCompletion(correct,roundTotal,allMastered){
   const status = el("notifyStatus");
   status.hidden = false;
   if(!SLACK_NOTIFY_URL){
     status.className = "notify warn";
-    status.textContent = "Slack通知は未設定です。SLACK_NOTIFY_URL に社内の通知中継URLを設定すると、初回完了時に自動通知されます。";
+    status.textContent = "Slack通知は未設定です。SLACK_NOTIFY_URL に社内の通知中継URLを設定すると、各ラウンド完了時に自動通知されます。";
     return;
   }
   status.className = "notify";
@@ -644,14 +652,21 @@ async function notifyInitialCompletion(correct){
       headers:{"Content-Type":"text/plain;charset=UTF-8"},
       body:JSON.stringify({
         source:"jstqb-drill",
-        event:"first_round_completed",
+        event:"round_completed",
         name:el("learnerName").value.trim(),
         attemptId:initialAttemptId,
-        correct
+        roundNumber,
+        roundTotal,
+        correct,
+        masteredCount:mastered.size,
+        total:initialQuestions.length,
+        allMastered
       })
     });
     status.className = "notify ok";
-    status.textContent = "Slackへの初回50問完了通知を受け付けました（通知先で受信状況を確認してください）。";
+    status.textContent = allMastered
+      ? "Slackへ全問習得の完了通知と設計課題の展開依頼を送信しました（通知先で受信状況を確認してください）。"
+      : `Slackへ第${roundNumber}ラウンドの完了通知を送信しました（通知先で受信状況を確認してください）。`;
   }catch(error){
     status.className = "notify error";
     status.textContent = "Slack通知を送信できませんでした。担当者へ連絡してください（"+error.message+"）。";
@@ -699,13 +714,12 @@ function finish(){
   }
   const retryBtn=el("retryBtn");
   retryBtn.textContent = pass ? "最初から50問に再挑戦" : `間違えた${lastWrong.length}問だけやり直す`;
-  let shouldNotify=false;
-  if(roundNumber===1 && !initialCompletionSent){
-    initialCompletionSent=true;
-    shouldNotify=true;
-  }
+  const allMastered=mastered.size===initialQuestions.length;
+  const shouldNotify=roundNumber>lastNotifiedRound;
+  if(roundNumber===1) initialCompletionSent=true;
+  if(shouldNotify) lastNotifiedRound=roundNumber;
   saveProgress("result");
-  if(shouldNotify) notifyInitialCompletion(correct);
+  if(shouldNotify) notifyRoundCompletion(correct,total,allMastered);
   show("result");
   window.scrollTo({top:0,behavior:reduceMotion?"auto":"smooth"});
 }
@@ -740,6 +754,7 @@ el("clearProgressBtn").addEventListener("click",()=>{
   lastWrong=[];
   roundNumber=0;
   initialCompletionSent=false;
+  lastNotifiedRound=0;
   initialAttemptId="";
   el("learnerName").value="";
   el("readSyllabus").checked=false;

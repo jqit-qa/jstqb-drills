@@ -240,6 +240,7 @@ function createRuntime(storage, confirmations = [], runTimersImmediately = true)
           lastWrong = wrongIds.map(id => QUESTIONS.find(question => question.id === id));
           roundNumber = completedRounds;
           initialCompletionSent = true;
+          lastNotifiedRound = completedRounds;
         },
         finishWithWrongIds(wrongIds) {
           const wrongIdSet = new Set(wrongIds);
@@ -258,6 +259,7 @@ function createRuntime(storage, confirmations = [], runTimersImmediately = true)
             lastWrongIds: lastWrong.map(question => question.id),
             roundNumber,
             initialCompletionSent,
+            lastNotifiedRound,
             initialAttemptId,
             savedProgress,
             view: {
@@ -335,6 +337,12 @@ const masteredIds = Array.from(questions, question => question.id)
 firstVisit.api.finishWithWrongIds(wrongIds);
 assert.ok(storage.size > 0, '結果到達後の進捗がlocalStorageへ保存されること');
 assert.equal(firstVisit.requests.length, 1, '初回50問完了時に通知を1回送ること');
+const firstRoundPayload = JSON.parse(firstVisit.requests[0].options.body);
+assert.equal(firstRoundPayload.event, 'round_completed');
+assert.equal(firstRoundPayload.roundNumber, 1);
+assert.equal(firstRoundPayload.roundTotal, 50);
+assert.equal(firstRoundPayload.masteredCount, 47);
+assert.equal(firstRoundPayload.allMastered, false);
 
 const reloaded = createRuntime(storage);
 let restored = reloaded.api.getState();
@@ -346,6 +354,7 @@ assert.deepEqual(
 );
 assert.equal(restored.roundNumber, 1);
 assert.equal(restored.initialCompletionSent, true);
+assert.equal(restored.lastNotifiedRound, 1);
 assert.equal(reloaded.elements.resumePanel.hidden, false);
 assert.match(reloaded.elements.resumeSummary.textContent, /残り3問/);
 
@@ -409,6 +418,22 @@ const completedReload = createRuntime(completedStorage);
 assert.equal(completedReload.elements.resumeBtn.hidden, true);
 assert.match(completedReload.elements.resumeSummary.textContent, /全50問を習得済み/);
 
+const roundNotificationStorage = new Map();
+const roundNotifications = createRuntime(roundNotificationStorage);
+roundNotifications.elements.learnerName.value = 'ラウンド通知テスト';
+roundNotifications.api.buildInitialSession();
+roundNotifications.api.finishWithWrongIds([3, 8]);
+roundNotifications.elements.retryBtn.trigger('click');
+roundNotifications.api.finishWithWrongIds([8]);
+roundNotifications.elements.retryBtn.trigger('click');
+roundNotifications.api.finishWithWrongIds([]);
+assert.equal(roundNotifications.requests.length, 3, '完了した全ラウンドを各1回通知すること');
+const roundPayloads = roundNotifications.requests.map(item => JSON.parse(item.options.body));
+assert.deepEqual(Array.from(roundPayloads, payload => payload.roundNumber), [1, 2, 3]);
+assert.deepEqual(Array.from(roundPayloads, payload => payload.roundTotal), [50, 2, 1]);
+assert.deepEqual(Array.from(roundPayloads, payload => payload.masteredCount), [48, 49, 50]);
+assert.deepEqual(Array.from(roundPayloads, payload => payload.allMastered), [false, false, true]);
+
 const legacyStorage = new Map();
 const currentResult = JSON.parse(completedStorage.get(STORAGE_KEY));
 const legacyResult = {...currentResult, version: 1};
@@ -416,10 +441,12 @@ delete legacyResult.phase;
 delete legacyResult.sessionQuestionIds;
 delete legacyResult.answers;
 delete legacyResult.currentIndex;
+delete legacyResult.lastNotifiedRound;
 legacyStorage.set(LEGACY_STORAGE_KEY, JSON.stringify(legacyResult));
 const migratedLegacy = createRuntime(legacyStorage);
 assert.equal(legacyStorage.has(LEGACY_STORAGE_KEY), false);
 assert.equal(JSON.parse(legacyStorage.get(STORAGE_KEY)).version, 2);
+assert.equal(migratedLegacy.api.getState().lastNotifiedRound, 1);
 assert.match(migratedLegacy.elements.resumeSummary.textContent, /全50問を習得済み/);
 
 storage.set(STORAGE_KEY, JSON.stringify({version: 2}));
@@ -470,24 +497,43 @@ vm.createContext(gasContext);
 vm.runInContext(gas + '\nthis.handlePost = doPost;', gasContext);
 const request = {
   source: 'jstqb-drill',
-  event: 'first_round_completed',
+  event: 'round_completed',
   name: '連携テスト',
   attemptId: 'duplicate-test',
-  correct: 42
+  roundNumber: 1,
+  roundTotal: 50,
+  correct: 42,
+  masteredCount: 42,
+  total: 50,
+  allMastered: false
 };
 gasContext.handlePost({postData: {contents: JSON.stringify(request)}});
 gasContext.handlePost({postData: {contents: JSON.stringify(request)}});
-assert.equal(sent.length, 1, '同一受験IDのSlack通知を重複送信しないこと');
+assert.equal(sent.length, 1, '同一受験ID・同一ラウンドのSlack通知を重複送信しないこと');
+
+const secondRoundRequest = {
+  ...request,
+  roundNumber: 2,
+  roundTotal: 8,
+  correct: 6,
+  masteredCount: 48
+};
+gasContext.handlePost({postData: {contents: JSON.stringify(secondRoundRequest)}});
+gasContext.handlePost({postData: {contents: JSON.stringify(secondRoundRequest)}});
+assert.equal(sent.length, 2, '同一受験IDでも次のラウンドは通知すること');
+const secondRoundMessage = JSON.parse(sent[1].options.payload);
+assert.equal(secondRoundMessage.blocks[1].fields[1].text, '実施ラウンド\n誤答やり直し 1回目');
+assert.equal(secondRoundMessage.blocks[1].fields[2].text, '今回の結果\n6/8問正解');
 
 const maliciousNameRequest = {
   ...request,
   name: '\u202e<https://evil.example|本人>\u200b',
   attemptId: 'security-test-0001',
-  correct: 50
+  correct: 42
 };
 gasContext.handlePost({postData: {contents: JSON.stringify(maliciousNameRequest)}});
-assert.equal(sent.length, 2);
-const securedMessage = JSON.parse(sent[1].options.payload);
+assert.equal(sent.length, 3);
+const securedMessage = JSON.parse(sent[2].options.payload);
 assert.ok(
   securedMessage.blocks[1].fields.every(field => field.type === 'plain_text'),
   '受講者名を含むSlackフィールドをplain_textで送ること'
@@ -506,7 +552,38 @@ assert.ok(
   'Slack通知自体に自己申告データである旨を表示すること'
 );
 
-for (let index = 0; index < 8; index++) {
+const allMasteredRequest = {
+  ...request,
+  attemptId: 'all-mastered-test',
+  correct: 50,
+  masteredCount: 50,
+  allMastered: true
+};
+gasContext.handlePost({postData: {contents: JSON.stringify(allMasteredRequest)}});
+assert.equal(sent.length, 4);
+const allMasteredMessage = JSON.parse(sent[3].options.payload);
+assert.match(allMasteredMessage.text, /<!channel>/);
+assert.ok(
+  allMasteredMessage.blocks.some(block =>
+    block.type === 'section'
+      && block.text?.type === 'mrkdwn'
+      && block.text.text.includes('<!channel>')
+      && block.text.text.includes('設計課題の展開をお願いします')
+  ),
+  '全50問習得時は@channel相当の通知と設計課題の展開依頼を追加すること'
+);
+
+const legacyRequest = {
+  source: 'jstqb-drill',
+  event: 'first_round_completed',
+  name: '旧HTML利用者',
+  attemptId: 'legacy-client-test',
+  correct: 40
+};
+gasContext.handlePost({postData: {contents: JSON.stringify(legacyRequest)}});
+assert.equal(sent.length, 5, 'GAS先行デプロイ時は旧HTMLの初回通知も受け付けること');
+
+for (let index = 0; index < 5; index++) {
   gasContext.handlePost({postData: {contents: JSON.stringify({
     ...request,
     attemptId: `rate-test-${String(index).padStart(4, '0')}`
@@ -532,8 +609,8 @@ assert.equal(sent.length, 10, '文字列型の点数を拒否すること');
 assert.ok(
   securityLogs.some(log => log.includes('Short-term notification limit exceeded'))
     && securityLogs.some(log => log.includes('Invalid request size'))
-    && securityLogs.some(log => log.includes('Invalid score')),
+    && securityLogs.some(log => log.includes('Invalid completion data')),
   '拒否理由を異常投稿の検知ログとして記録すること'
 );
 
-console.log('PASS: 問題整合・進捗復元・保存FAQ・モバイル操作・Slack入力無害化・重複／レート抑止');
+console.log('PASS: 問題整合・進捗復元・保存FAQ・モバイル操作・全ラウンド通知・Slack入力無害化・重複／レート抑止');
