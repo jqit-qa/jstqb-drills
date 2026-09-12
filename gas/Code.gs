@@ -19,6 +19,16 @@ const NOTIFICATION_EVENTS = {
         ? '全問正解です。'
         : 'この後、間違えた問題のみ再実施します。';
     }
+  },
+  'decision-table-assignment:production_quiz_completed': {
+    total: 4,
+    requireFullScore: true,
+    title: 'デシジョンテーブル研修 完了通知',
+    text: 'デシジョンテーブル研修の理解度チェックが完了しました',
+    scoreLabel: '理解度チェック',
+    detail: function() {
+      return '本番問題の理解度チェックが全問正解です。';
+    }
   }
 };
 const MAX_REQUEST_CHARS = 2048;
@@ -248,7 +258,8 @@ function sanitizeName_(value) {
     })
     .trim();
 
-  return Array.from(normalized).slice(0, 80).join('');
+  const safeValue = Array.from(normalized).slice(0, 80).join('');
+  return /^[=+\-@]/.test(safeValue) ? "'" + safeValue : safeValue;
 }
 
 function sanitizeAttemptId_(value) {
